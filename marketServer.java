@@ -213,10 +213,6 @@ public class marketServer {
 			return (String) received;
 		}
 
-		private void receiveTextFile(ObjectInputStream inStream) {
-
-		}
-
 		private void addComm() {
 			
 		}
