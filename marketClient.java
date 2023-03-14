@@ -41,7 +41,6 @@ public class marketClient {
 
 				File f = new File("Client_Files/" + fileName);
 
-
 				if (!f.exists() || !f.canRead() || !f.isFile()) {
 					System.out.println("--> \'" + fileName + "\' não encontrado");
 					continue;
@@ -55,7 +54,6 @@ public class marketClient {
 					e.printStackTrace();
 					System.exit(-1);
 				}
-
 
 				break;
 
@@ -103,7 +101,6 @@ public class marketClient {
 
 		System.out.print("password: ");
 		String pass = sc.next();
-
 
 		try {
 			out.writeObject(user);

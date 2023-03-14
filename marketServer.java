@@ -1,3 +1,4 @@
+
 /***************************************************************************
  *
  *   Seguranca e Confiabilidade 2020/21
@@ -119,12 +120,6 @@ public class marketServer {
 					// TODO: handle exception
 				}
 
-				if (login_db.put("martim", "321")) {
-					// System.out.println("Sucesso na escrita");
-				} else {
-					System.out.println("Falha na escrita na base de dados de login");
-				}
-
 				System.out.println("Received: (user: " + user + ", pass: " + passwd + ")");
 
 				// Ir buscar a palavra-passe
@@ -166,12 +161,11 @@ public class marketServer {
 					} else {
 						System.out.println("Ficheiro já existe");
 					}
-					
+
 				} catch (IOException e) {
 					System.out.println("Ficheiro ou pasta inexistente: " + filePath);
 					System.exit(-1);
 				}
-
 
 				File recFile = null;
 				try {
@@ -187,8 +181,8 @@ public class marketServer {
 				int bytesRead = fin.read(content);
 
 				System.out.println(content);
-				
-				output.write(content, 0, bytesRead);;
+
+				output.write(content, 0, bytesRead);
 
 				fin.close();
 				output.close();
@@ -207,7 +201,7 @@ public class marketServer {
 			Object received = null;
 
 			try {
-				 received = inStream.readObject();
+				received = inStream.readObject();
 			} catch (Exception e) {
 				return null;
 			}
@@ -215,13 +209,12 @@ public class marketServer {
 			if (!(received instanceof String)) {
 				return null;
 			}
-			
+
 			return (String) received;
 		}
 
 		private void receiveTextFile(ObjectInputStream inStream) {
-		
-		
+
 		}
 
 	}
