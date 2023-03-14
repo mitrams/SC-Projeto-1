@@ -29,58 +29,45 @@ public class marketClient {
 			System.out.println("Welcome!");
 
 			Scanner sc = new Scanner(System.in);
-
-			while (true) {
+			boolean exit = false;
+			while (exit == !true) {
 				System.out.print("> ");
 
-				String fileName = sc.next();
+				String input = sc.nextLine();
+				String[] cmd = input.split(" ");
 
-				if (fileName.equals("exit")) {
-					break;
+				switch(cmd[0].charAt(0)) {
+					case ('e'):
+					exit = true;
+						break;
+					case ('a'):
+						System.out.println("goto add");
+						break;
+					case ('s'):
+						System.out.println("goto sell");
+						break;
+					case ('v'):
+						System.out.println("goto view");
+						break;
+					case ('b'):
+						System.out.println("goto buy");
+						break;
+					case ('c'):
+						System.out.println("goto classify");
+						break;
+					case ('t'):
+						talk(cmd);
+						break;
+					case ('r'):
+						read(cmd);
+						break;
+					default:
+						System.out.println("--> \'" + cmd[0] + "\' nao encontrado");
 				}
-
-				File f = new File("Client_Files/" + fileName);
-
-				if (!f.exists() || !f.canRead() || !f.isFile()) {
-					System.out.println("--> \'" + fileName + "\' não encontrado");
-					continue;
-				}
-
-				outStream.writeObject(fileName);
-
-				try {
-					outStream.writeObject(f);
-				} catch (IOException e) {
-					e.printStackTrace();
-					System.exit(-1);
-				}
-
-				break;
-
-				/*
-				 * outStream.writeLong(f.length());
-				 * FileInputStream fin = new FileInputStream(f);
-				 * InputStream input = new BufferedInputStream(fin);
-				 * byte[] buffer = new byte[1024];
-				 * 
-				 * long bytesRead = 0;
-				 * while ((bytesRead = input.read(buffer)) != -1) {
-				 * outStream.writeLong(bytesRead);
-				 * outStream.write(buffer);
-				 * }
-				 * 
-				 * outStream.writeLong(0);
-				 */
-
-				// input.close();
-
 			}
-
 			inStream.close();
 			outStream.close();
-
 			sc.close();
-
 			socket.close();
 
 		} catch (UnknownHostException e) {
@@ -101,6 +88,7 @@ public class marketClient {
 
 		System.out.print("password: ");
 		String pass = sc.next();
+
 
 		try {
 			out.writeObject(user);
@@ -123,4 +111,19 @@ public class marketClient {
 		return false;
 	}
 
+	public static void talk(String[] cmd){
+		if(cmd.length != 3) {
+			System.out.println("Numero de argumentos errado");
+			return;
+		}
+		System.out.println("Talk");
+	}
+
+	public static void read(String[] cmd){
+		if(cmd.length != 1) {
+			System.out.println("Numero de argumentos errado");
+			return;
+		}
+		System.out.println("Read");
+	}
 }
