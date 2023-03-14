@@ -35,18 +35,30 @@ public class marketServer {
 
 		System.out.println("servidor: main");
 		marketServer server = new marketServer();
-		server.startServer();
+		server.startServer(args);
 	}
 
-	public void startServer() {
+	public void startServer(String[] args) {
 		ServerSocket sSoc = null;
 
+		int port = 23456;
+
+		if (args.length != 0) {
+			try {
+				port = Integer.parseInt(args[0]);
+			} catch (NumberFormatException e) {
+				e.printStackTrace(System.err);
+			}
+		}
+
 		try {
-			sSoc = new ServerSocket(23456);
+			sSoc = new ServerSocket(port);
 		} catch (IOException e) {
 			System.err.println(e.getMessage());
 			System.exit(-1);
 		}
+
+		System.out.println("Abri a porta " + port);
 
 		while (true) {
 			try {
@@ -148,11 +160,18 @@ public class marketServer {
 
 				// System.out.println(filePath);
 
-				if (f.createNewFile()) {
-					System.out.println("Ficheiro criado");
-				} else {
-					System.out.println("Ficheiro já existe");
+				try {
+					if (f.createNewFile()) {
+						System.out.println("Ficheiro criado");
+					} else {
+						System.out.println("Ficheiro já existe");
+					}
+					
+				} catch (IOException e) {
+					System.out.println("Ficheiro ou pasta inexistente: " + filePath);
+					System.exit(-1);
 				}
+
 
 				File recFile = null;
 				try {
