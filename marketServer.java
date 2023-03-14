@@ -42,7 +42,7 @@ public class marketServer {
 	public void startServer(String[] args) {
 		ServerSocket sSoc = null;
 
-		int port = 23456;
+		int port = 12345;
 
 		if (args.length != 0) {
 			try {
