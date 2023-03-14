@@ -217,6 +217,40 @@ public class marketServer {
 
 		}
 
+		private void addComm() {
+			
+		}
+
+		private void sellComm() {
+			
+		}
+
+		private void viewComm() {
+			
+		}
+
+		private void buyComm() {
+			
+		}
+
+		private void walletComm() {
+			
+		}
+
+		private void classifyComm() {
+			
+		}
+
+		private void talkComm() {
+			
+		}
+
+		private void readComm() {
+			
+		}
+
+
+
 	}
 
 	class LoginInfo {
