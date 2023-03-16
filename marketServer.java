@@ -213,7 +213,7 @@ public class marketServer {
 			return (String) received;
 		}
 
-		private void addComm() {
+		private void addComm(String wine, File imageFile) {
 			
 		}
 
@@ -221,7 +221,7 @@ public class marketServer {
 			
 		}
 
-		private void viewComm() {
+		private void viewComm(Wine wine) {
 			
 		}
 
