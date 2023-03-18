@@ -213,35 +213,35 @@ public class marketServer {
 			return (String) received;
 		}
 
-		private void addComm(String wine, File imageFile) {
+		private synchronized void addComm(ObjectInputStream in) {
 
 		}
 
-		private void sellComm() {
+		private synchronized void sellComm() {
 
 		}
 
-		private void viewComm(Wine wine) {
+		private synchronized void viewComm(Wine wine) {
 
 		}
 
-		private void buyComm() {
+		private synchronized void buyComm() {
 
 		}
 
-		private void walletComm() {
+		private synchronized void walletComm() {
 
 		}
 
-		private void classifyComm() {
+		private synchronized void classifyComm() {
 
 		}
 
-		private void talkComm() {
+		private synchronized void talkComm() {
 
 		}
 
-		private void readComm() {
+		private synchronized void readComm() {
 
 		}
 
