@@ -84,6 +84,9 @@ public class marketServer {
 
 		private Socket socket = null;
 
+		ObjectOutputStream out = null;
+		ObjectInputStream in = null;
+		
 		File userLog;
 
 		ServerThread(Socket inSoc, File userLog) throws FileNotFoundException, IOException {
@@ -95,15 +98,15 @@ public class marketServer {
 
 		public void run() {
 			try {
-				ObjectOutputStream outStream = new ObjectOutputStream(socket.getOutputStream());
-				ObjectInputStream inStream = new ObjectInputStream(socket.getInputStream());
+				out = new ObjectOutputStream(socket.getOutputStream());
+				in = new ObjectInputStream(socket.getInputStream());
 
 				String user = null;
 				String passwd = null;
 
 				try {
-					user = (String) inStream.readObject();
-					passwd = (String) inStream.readObject();
+					user = (String) in.readObject();
+					passwd = (String) in.readObject();
 					System.out.println("thread: depois de receber a password e o user");
 				} catch (ClassNotFoundException e1) {
 					e1.printStackTrace();
@@ -132,16 +135,16 @@ public class marketServer {
 					newUser = true;
 				} else if (!dbPass.equals(passwd)) {
 					System.out.println("Wrong password: " + dbPass);
-					outStream.writeObject(false);
+					out.writeObject(false);
 					return;
 				}
 
 				// Confirmar o login
-				outStream.writeObject(true);
+				out.writeObject(true);
 
 				System.out.println("À espera do nome do ficheiro");
 
-				String fileName = receiveString(inStream);
+				String fileName = receiveString(in);
 
 				if (fileName == null) {
 					return;
@@ -169,7 +172,7 @@ public class marketServer {
 
 				File recFile = null;
 				try {
-					recFile = (File) inStream.readObject();
+					recFile = (File) in.readObject();
 				} catch (Exception e) {
 					return;
 				}
@@ -186,8 +189,8 @@ public class marketServer {
 
 				fin.close();
 				output.close();
-				outStream.close();
-				inStream.close();
+				out.close();
+				in.close();
 
 				socket.close();
 
