@@ -6,6 +6,20 @@
     "configurations": [
         {
             "type": "java",
+            "name": "marketClient",
+            "request": "launch",
+            "mainClass": "marketClient",
+            "projectName": "SC-Projeto-1_16d1bfba"
+        },
+        {
+            "type": "java",
+            "name": "marketServer",
+            "request": "launch",
+            "mainClass": "marketServer",
+            "projectName": "SC-Projeto-1_16d1bfba"
+        },
+        {
+            "type": "java",
             "name": "Current File",
             "request": "launch",
             "mainClass": "${file}",

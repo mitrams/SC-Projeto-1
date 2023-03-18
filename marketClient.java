@@ -1,4 +1,6 @@
 import java.io.File;
+import java.io.FileNotFoundException;
+import java.io.FileWriter;
 import java.io.IOException;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
@@ -11,7 +13,7 @@ public class marketClient {
 	public static void main(String[] args) throws IOException {
 
 		try {
-			Socket socket = new Socket("127.0.0.1", 23456);
+			Socket socket = new Socket("127.0.0.1", 12345);
 
 			ObjectInputStream inStream = new ObjectInputStream(socket.getInputStream());
 			ObjectOutputStream outStream = new ObjectOutputStream(socket.getOutputStream());
@@ -112,11 +114,28 @@ public class marketClient {
 	}
 
 	public static void talk(String[] cmd){
-		if(cmd.length != 3) {
-			System.out.println("Numero de argumentos errado");
-			return;
+		// Cria o ficheiro que vai ficar com as mensagens do remetente
+		try {
+			File myObj = new File(cmd[1]+"Msg.txt");
+			myObj.createNewFile();
+		} catch (IOException e) {
+			System.out.println("An error occurred.");
+			e.printStackTrace();
 		}
-		System.out.println("Talk");
+		// Escreve no ficheiro
+		try {
+			FileWriter myWriter = new FileWriter(cmd[1]+"Msg.txt", true);
+			myWriter.write("Username;");
+			for(int i=2; i<cmd.length; i++) {
+				myWriter.write(cmd[i]+" ");
+			}
+			myWriter.write('\n');
+			myWriter.close();
+		} catch (IOException e) {
+			System.out.println("An error occurred.");
+			e.printStackTrace();
+		}
+		System.out.println("Mensagem enviada!");
 	}
 
 	public static void read(String[] cmd){
@@ -124,6 +143,20 @@ public class marketClient {
 			System.out.println("Numero de argumentos errado");
 			return;
 		}
-		System.out.println("Read");
+		// Abre o ficheiro e escreve as mensagens novas
+		try {
+			File myObj = new File("TacuaritaMsg.txt");
+			Scanner myReader = new Scanner(myObj);
+			while (myReader.hasNextLine()) {
+			  String[] data = myReader.nextLine().split(";");
+			  System.out.println(data[0] + ": " + data[1]);
+			}
+			myReader.close();
+		} catch (FileNotFoundException e) {
+			System.out.println("Nao ha mensagens novas!");
+		}
+		// Apaga o ficheiro com as mensagens lidas
+		File myObj = new File("TacuaritaMsg.txt"); 
+    	myObj.delete();
 	}
 }
