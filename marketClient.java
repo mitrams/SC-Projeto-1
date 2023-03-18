@@ -127,16 +127,16 @@ public class marketClient {
 		return false;
 	}
 
-	public static void talk(String[] cmd){
-		if(cmd.length != 3) {
+	public static void talk(String[] cmd) {
+		if (cmd.length != 3) {
 			System.out.println("Numero de argumentos errado");
 			return;
 		}
 		System.out.println("Talk");
 	}
 
-	public static void read(String[] cmd){
-		if(cmd.length != 1) {
+	public static void read(String[] cmd) {
+		if (cmd.length != 1) {
 			System.out.println("Numero de argumentos errado");
 			return;
 		}
