@@ -21,25 +21,33 @@ import java.util.Scanner;
 public class marketServer {
 
 	final static File  ServerFolder = new File("Server_Files");
-	final static File userLog = new File(ServerFolder, "userLog");
+	final static File userLog = new File(ServerFolder, "loginInfo");
+
+	static WineDB wines;
 
 
 	public static void main(String[] args) {
 		if (!ServerFolder.exists()) {
 		if (!ServerFolder.mkdirs()) {
 					System.out.println("Failed to create server folder");
-			return;
+				System.exit(-1);
 		}
 		}
-
 
 		if (!userLog.exists()) {
 			try {
 				userLog.createNewFile();
 			} catch (IOException e1) {
-				e1.printStackTrace();
+				System.out.println("Failed to create wine database file");
 				System.exit(-1);
 			}
+		}
+
+		try {
+			wines = new WineDB(new File(ServerFolder, "wineInfo"));
+		} catch (FileNotFoundException e) {
+			System.out.println("Failed to create wine database file");
+			System.exit(-1);
 		}
 
 		System.out.println("servidor: main");
