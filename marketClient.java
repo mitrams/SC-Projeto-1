@@ -8,13 +8,16 @@ import java.util.Scanner;
 
 public class marketClient {
 
+	static ObjectInputStream inStream;
+	static ObjectOutputStream outStream;
+
 	public static void main(String[] args) throws IOException {
 
 		try {
 			Socket socket = new Socket("127.0.0.1", 12345);
 
-			ObjectInputStream inStream = new ObjectInputStream(socket.getInputStream());
-			ObjectOutputStream outStream = new ObjectOutputStream(socket.getOutputStream());
+			inStream = new ObjectInputStream(socket.getInputStream());
+			outStream = new ObjectOutputStream(socket.getOutputStream());
 
 			boolean ans = false;
 			// while (!ans) {
