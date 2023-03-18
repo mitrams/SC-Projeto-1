@@ -20,10 +20,18 @@ import java.util.Scanner;
 
 public class marketServer {
 
-	public static File userLog;
+	final static File  ServerFolder = new File("Server_Files");
+	final static File userLog = new File(ServerFolder, "userLog");
+
 
 	public static void main(String[] args) {
-		userLog = new File("userLog.txt");
+		if (!ServerFolder.exists()) {
+		if (!ServerFolder.mkdirs()) {
+					System.out.println("Failed to create server folder");
+			return;
+		}
+		}
+
 
 		if (!userLog.exists()) {
 			try {
