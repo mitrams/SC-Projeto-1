@@ -125,7 +125,7 @@ public class marketClient {
 		// Escreve no ficheiro
 		try {
 			FileWriter myWriter = new FileWriter(cmd[1]+"Msg.txt", true);
-			myWriter.write("Username;");
+			myWriter.write("Username:");
 			for(int i=2; i<cmd.length; i++) {
 				myWriter.write(cmd[i]+" ");
 			}
@@ -148,8 +148,8 @@ public class marketClient {
 			File myObj = new File("TacuaritaMsg.txt");
 			Scanner myReader = new Scanner(myObj);
 			while (myReader.hasNextLine()) {
-			  String[] data = myReader.nextLine().split(";");
-			  System.out.println(data[0] + ": " + data[1]);
+			  String data = myReader.nextLine();
+			  System.out.println(data);
 			}
 			myReader.close();
 		} catch (FileNotFoundException e) {

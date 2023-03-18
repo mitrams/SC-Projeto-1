@@ -275,7 +275,7 @@ public class marketServer {
 		public boolean put(String user, String password) {
 			if (this.get(user) == null) {
 				try {
-					String line = user + ";" + password + '\n';
+					String line = user + ":" + password + '\n';
 					out.write(line);
 					out.flush();
 					System.out.println(line);
@@ -299,7 +299,7 @@ public class marketServer {
 				line = sc.nextLine();
 				System.out.println(line + " vs " + user);
 				System.out.flush();
-				userPass = line.split(";");
+				userPass = line.split(":");
 
 				if (user.equals(userPass[0])) {
 					return userPass[1];
