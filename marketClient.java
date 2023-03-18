@@ -62,7 +62,7 @@ public class marketClient {
 						read(cmd);
 						break;
 					default:
-						System.out.println("--> \'" + cmd[0] + "\' nao encontrado");
+						System.out.println("--> \'" + cmd[0] + "\' - Comando desconhecido");
 				}
 			}
 			inStream.close();
