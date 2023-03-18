@@ -36,30 +36,42 @@ public class marketClient {
 				String input = sc.nextLine();
 				String[] cmd = input.split(" ");
 
-				switch(cmd[0].charAt(0)) {
-					case ('e'):
-					exit = true;
+				switch(cmd[0]) {
+					case ("e"):
+					case ("exit"):
+						exit = true;
 						break;
-					case ('a'):
+					case ("a"):
+					case ("add"):
 						System.out.println("goto add");
 						break;
-					case ('s'):
+					case ("s"):
+					case ("sell"):
 						System.out.println("goto sell");
 						break;
-					case ('v'):
+					case ("v"):
+					case ("view"):
 						System.out.println("goto view");
 						break;
-					case ('b'):
+					case ("b"):
+					case ("buy"):
 						System.out.println("goto buy");
 						break;
-					case ('c'):
+					case ("c"):
+					case ("classify"):
 						System.out.println("goto classify");
 						break;
-					case ('t'):
+					case ("t"):
+					case ("talk"):
 						talk(cmd);
 						break;
-					case ('r'):
+					case ("r"):
+					case ("read"):
 						read(cmd);
+						break;
+					case ("h"):
+					case ("help"):
+						help();
 						break;
 					default:
 						System.out.println("--> \'" + cmd[0] + "\' - Comando desconhecido");
@@ -78,6 +90,10 @@ public class marketClient {
 			e.printStackTrace();
 		}
 
+	}
+
+	private static void help() {
+		System.out.println("Comandos possíveis:\n\tadd\n\tview\n\tsell\n\tbuy\n\twallet\n\tclassify\n\ttalk\n\tread");
 	}
 
 	public static boolean login(ObjectInputStream in, ObjectOutputStream out) {
