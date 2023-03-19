@@ -21,6 +21,8 @@ import java.util.Scanner;
  public class marketServer {
 	
 	private UserCatalog uc = UserCatalog.getCatalog();
+
+	private WineCatalog wc = WineCatalog.getCatalog();
  
 	 public static File userLog;
 
@@ -117,17 +119,7 @@ import java.util.Scanner;
 					 e1.printStackTrace();
 				 }
  
-				 // TODO: refazer
-				 // este codigo apenas exemplifica a comunicacao entre o cliente e o servidor
-				 // nao faz qualquer tipo de autenticacao
- 
-				 LoginInfo login_db = null;
-				 try {
-					 login_db = new LoginInfo(userLog);
-				 } catch (Exception e) {
-					 // TODO: handle exception
-				 }
- 
+				
 				 System.out.println("Recebi: (utilizador: " + user + ", password: " + passwd + ")");
 
 				 if(uc.containsUser(user)) {
@@ -144,10 +136,11 @@ import java.util.Scanner;
 				 else {
 					uc.registerUser(user, passwd);
 					System.out.println("Utilizador criado");
+					u = uc.getUser(user);
 					out.writeObject(true);
 				 }
 				 
-				 runCommands(in, out);
+				 runCommands(in, out, u);
  
 			//	 fin.close();
 			//	 output.close();
@@ -161,7 +154,7 @@ import java.util.Scanner;
 			 }
  
 		 }
-		 private void runCommands(ObjectInputStream inStream, ObjectOutputStream outStream) {
+		 private void runCommands(ObjectInputStream inStream, ObjectOutputStream outStream, User u) {
 
 			Boolean b = false;
 			while (!b) {
@@ -169,18 +162,18 @@ import java.util.Scanner;
 					char command = (char) inStream.readObject();
 					switch (command) {
 						case 'a':
+							addWine(inStream, outStream, u);
 							break;
 						case 's':
-							sellWine(inStream, outStream);
+							sellWine(inStream, outStream, u);
 							break;
 						case 'v':
 							break;
 						case 'b':
-							buyWine(inStream, outStream );
+							buyWine(inStream, outStream, u);
 							break;
 						case 'w':
-							User user = new User(getName(), getName(), command);
-							wallet(inStream, outStream, user);
+							wallet(inStream, outStream, u);
 							break;
 						case 'c':
 							break;
@@ -203,7 +196,7 @@ import java.util.Scanner;
 		private void wallet(ObjectInputStream inStream, ObjectOutputStream outStream, User user) {
 			
 		
-			int bal = user.getBalance();
+			float bal = user.getBalance();
 			try {
 				outStream.writeObject(bal);
 			} catch (IOException e) {
@@ -213,16 +206,27 @@ import java.util.Scanner;
 		
 		}
 
-		private void buyWine(ObjectInputStream inStream, ObjectOutputStream outStream) {
+		private void addWine(ObjectInputStream inStream, ObjectOutputStream outStream, User u) {
 			try {
-				String wine = (String) inStream.readObject();
-				String selerId = (String) inStream.readObject();
-				int quantity = (int) inStream.readObject();
-				System.out.println("recebi instrução buy " +wine + " "+ selerId + " "+ quantity);
+				String name = (String) inStream.readObject();
+				String imgPath = (String) inStream.readObject();
+				System.out.println("recebi instrução add " +name + " "+ imgPath);
 
-				outStream.writeObject(0);
-
-				
+				if(!wc.validateWine(name)) {
+					wc.addWine(name,imgPath);
+					try {
+						outStream.writeObject(0);
+					} catch (IOException e) {
+						e.printStackTrace();
+					}
+				}
+				else {
+					try {
+						outStream.writeObject(1);
+					} catch (IOException e) {
+						e.printStackTrace();
+					}
+				}
 			} catch (IOException e) {
 				// TODO Auto-generated catch block
 				e.printStackTrace();
@@ -230,15 +234,65 @@ import java.util.Scanner;
 				System.err.println(e.getMessage());
 				System.exit(-1);
 			}
+		}
+
+		private void buyWine(ObjectInputStream inStream, ObjectOutputStream outStream, User u) {
+			try {
+				String name = (String) inStream.readObject();
+				String seller = (String) inStream.readObject();
+				int quantity = (int) inStream.readObject();
+				System.out.println("recebi instrução buy " +name + " "+ seller + " "+ quantity);
+
+				if(!wc.validateWine(name)) {
+					outStream.writeObject(1);
+					return;
+				}
+				Wine w = wc.getWine(name);
+				Listing l = w.getSellerListing(seller);
+				if(l==null) {
+					outStream.writeObject(2);
+					return;
+				}
+				if(l.getQuantity()<quantity) {
+					outStream.writeObject(3);
+					return;
+				}
+				float trxValue=quantity*l.getValue();
+				if(u.getBalance()<trxValue) {
+					outStream.writeObject(4);
+					return;
+				}
+				l.sellQuantity(quantity);
+				u.changeBalance(-trxValue);
+				uc.getUser(seller).changeBalance(trxValue);
+				outStream.writeObject(0);		
+			} catch (IOException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			} catch (ClassNotFoundException e) {
+				System.err.println(e.getMessage());
+				System.exit(-1);
+			}
+			wc.print();
 
 		}
 
-		private void sellWine(ObjectInputStream inStream, ObjectOutputStream outStream) {
+		private void sellWine(ObjectInputStream inStream, ObjectOutputStream outStream, User u) {
 			try {
-				String wine = (String) inStream.readObject();
+				String name = (String) inStream.readObject();
 				Float value = (Float) inStream.readObject();
 				int quantity = (int) inStream.readObject();
-				System.out.println("recebi instrução sell " +wine + " "+ value + " "+ quantity);
+				System.out.println("recebi instrução sell " +name + " "+ value + " "+ quantity);
+
+				if(!wc.validateWine(name)) {
+					try {
+						outStream.writeObject(1);
+						return;
+					} catch (IOException e) {
+						e.printStackTrace();
+					}
+				}
+				wc.addListing(name, u.getName(), value, quantity);
 
 				outStream.writeObject(0);
 
@@ -250,6 +304,7 @@ import java.util.Scanner;
 				System.err.println(e.getMessage());
 				System.exit(-1);
 			}
+			wc.print();
 		}
 
 		private String receiveString(ObjectInputStream inStream) {
@@ -272,61 +327,7 @@ import java.util.Scanner;
  
 		 }
  
-		 /**
-		 * @param wine
-		 * @param value
-		 * @param quantity
-		 * @return
-		 */
-/* 		private synchronized String sellComm(String wine, int value, int quantity, String command) {
-					
-		
-			String[] tokens = command.split(" ");
-		
-			ArrayList<String> sellerContent = getFileContent(SELLWINES);
 
-			try {
-				wine = String.valueOf(Integer.parseInt(tokens[1]));
-				value = Integer.parseInt(tokens[2]);
-				quantity = Integer.parseInt(tokens[3]);
-
-			} catch (NumberFormatException nfe) {
-				return "Error, amount is not numeric";
-			}
-			if (value <= 0 || quantity <=0 ) {
-				return "Error, amount must be positive";
-			}
-			
-			if (sellerContent == null) {
-				return "Error fetching file content.";
-			}
-	
-		
-			for (Wine w : sellerContent) {
-				if (!w.getId().equals(wine)) {
-					return "Error, wine does not exist.";
-
-				}else{
-					if (w.getQuatity() >= quantity) {	
-						String sellInfo = "Wine: " + wine + ", Value: " + value + ", Quantity: " + quantity;
-						w.sellWines().add(sellInfo);
-						w.quantity -= quantity;
-					} else {
-						return "Error: Not enough " + wine + " to sell.";
-					}
-				}
-			}
-
-			String seller = "WineId:" + wine + "Value:" + value+ ":" + "Quantity:" + quantity ;
-			boolean write = appendToFile(SELLWINES, seller);
-			if (!write) {
-				return "Error writing to file.";
-			}
-
-				return "Successfully added " + quantity + " units of " + wine + " to sell list for " + value + " each.";
- 
-		 }
-  */
 		 private synchronized void viewComm(Wine wine) {
  
 		 }
@@ -354,114 +355,5 @@ import java.util.Scanner;
 	 }
  
 
-	 class LoginInfo {
- 
-		 private FileWriter out;
- 
-		 Scanner sc = null;
- 
-		 public LoginInfo(File userInfo) throws FileNotFoundException {
-			 sc = new Scanner(userInfo);
-			 System.out.println(userInfo);
- 
-			 try {
-				 out = new FileWriter(userInfo, true);
-			 } catch (Exception e) {
-				 // TODO: handle exception
-				 System.out.println("Error: Falha na saída");
-				 System.exit(-1);
-			 }
-		 }
- 
-		 public boolean put(String user, String password) {
-			 if (this.get(user) == null) {
-				 try {
-					 String line = user + ":" + password + '\n';
-					 out.write(line);
-					 out.flush();
-					 System.out.println(line);
-				 } catch (IOException e) {
-					 e.printStackTrace();
-					 return false;
-				 }
- 
-				 return true;
-			 }
- 
-			 
-			 return false;
-		 }
- 
-		 public String get(String user) {
- 
-			 String line;
-			 String[] userPass;
-			 System.out.println("Nova linha: " + sc.hasNextLine());
-			 while (sc.hasNextLine()) {
-				 line = sc.nextLine();
-				 System.out.println(line + " vs " + user);
-				 System.out.flush();
-				 userPass = line.split(";");
- 
-				 if (user.equals(userPass[0])) {
-					 return userPass[1];
-				 }
- 
-			 }
- 
-			 return null;
-		 }
- 
-	 }
- 
-	 /**
-	  * wineDB
-	  */
-	 public class WineDB {
- 
-		 private Scanner sc;
-		 private FileWriter out;
- 
-		 public WineDB(String filePath) throws FileNotFoundException {
-			 File f = new File(filePath);
- 
-			 sc = new Scanner(f);
-		 }
- 
-		 public Wine get(String wine) {
-			 String line;
-			 String[] wineInfo;
-			 System.out.println("Nova linha:  " + sc.hasNextLine());
-			 while (sc.hasNextLine()) {
-				 line = sc.nextLine();
-				 wineInfo = line.split(";");
- 
-				 if (wine.equals(wineInfo[0])) {
-					 return new Wine(wine, Integer.parseInt(wineInfo[1]), Integer.parseInt(wineInfo[2]), wineInfo[3]);
-				 }
- 
-			 }
- 
-			 return null;
-		 }
- 
-		 public boolean put(String wine, int value, int quantity, String filePath) {
-			 if (this.get(wine) == null) {
-				 try {
-					 String line = wine + ";" + value + ";" + quantity + ";" + filePath;
-					 out.write(line);
-					 out.flush();
-					 System.out.println(line);
-				 } catch (IOException e) {
-					 e.printStackTrace();
-					 return false;
-				 }
- 
-				 return true;
-			 }
- 
-			 return false;
-		 }
- 
-	 }
+	
  }

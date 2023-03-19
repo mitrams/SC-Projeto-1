@@ -1,42 +1,57 @@
 import java.util.ArrayList;
+import java.util.List;
+
 
 /**
  * wine
  */
 public class Wine {
-    String id;
-    int value;
-    int quantity;
-    String imgPath;
-    private ArrayList<String> sellWines;
+    private String name;
+    private int stars = 0;
+    private String imgPath;
+    private ArrayList<Listing> listings;
 
-    public Wine(String id, int value, int quantity, String imgPath) {
-        this.id = id;
-        this.value = value;
-        this.quantity = quantity;
+    public Wine(String name, String imgPath) {
+        this.name = name;
         this.imgPath = imgPath;
-
-        this.sellWines = new ArrayList<>();
+        this.listings = new ArrayList<>();
     }
 
-	public String getId() {
-		return id;
+    public List<Listing> getListings() {
+      return listings;
+    }
+
+	public String getName() {
+		return name;
 	}
-	public int getValue() {
-		return value;
-	}
+
 	
-    public int getQuatity() {
-		return quantity;
-	}
-	
-	public String getImgpath() {
+	public String getImgPath() {
 		return imgPath;
 	}
 
-  public ArrayList<String> sellWines() {
-		return sellWines;
+  public void classify(int stars){
+    this.stars=stars;
+  }
+
+  public int getStars() {
+		return this.stars;
 	}
+
+  public void addListing(String seller, float value, int quantity){
+    Listing listing = new Listing(seller, value, quantity);
+    this.listings.add(listing);
+  }
+
+  public Listing getSellerListing(String seller) {
+    for(Listing lc : this.listings) {
+      if(lc.getSeller().equals(seller)) {
+        return lc;
+      }
+    }
+    return null;
+  }
+
 
    // public String sellerId(){
      //   return sellerId();

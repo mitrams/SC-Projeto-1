@@ -43,9 +43,8 @@ public class marketClient {
 						break;
 					case ("a"):
 					case ("add"):
-					//outStream.writeObject('e');
-					
 						System.out.println("goto add");
+						addWine(inStream,outStream,cmd);
 						break;
 					case ("s"):
 					case ("sell"):
@@ -104,7 +103,7 @@ public class marketClient {
 	private static void wallet(ObjectInputStream inStream, ObjectOutputStream outStream, String[] cmd) {
 		try {
 			outStream.writeObject('w');
-			int bal = (int) inStream.readObject();
+			float bal = (float) inStream.readObject();
 			System.out.println("Saldo: " + bal);
 		} catch (ClassNotFoundException | IOException e) {
 			// TODO Auto-generated catch block
@@ -112,6 +111,33 @@ public class marketClient {
 		}
 		
 	}
+
+	private static void addWine(ObjectInputStream inStream, ObjectOutputStream outStream, String[] cmd)  {
+		try{
+			if(cmd.length !=3){
+				System.out.println("Erro: Insira o input assim sell <wine> <value> <quantity>.");
+				return;
+			}
+
+			outStream.writeObject('a');
+			String wine = cmd[1];
+			String imgPath = cmd[2];
+		
+			outStream.writeObject(wine);
+			outStream.writeObject(imgPath);
+			int n = (int) inStream.readObject();
+			if (n == 0)
+				System.out.println("\n Vinho adicionado ao catálogo com sucesso.");
+			if (n == 1)
+				System.out.println("\nErro: Este vinho já existia anteriormente no catálogo.");
+
+		} catch (IOException | ClassNotFoundException e){
+			System.err.println(e.getMessage());
+			System.exit(-1);
+		}
+		
+	}
+
 
 	private static void buyWine(ObjectInputStream inStream, ObjectOutputStream outStream, String[] cmd) {
 		try{
@@ -140,7 +166,9 @@ public class marketClient {
 			if (n == 2)
 				System.out.println("\nErro: Esse comprador não têm esse vinho à venda.");
 			if (n == 3)
-				System.out.println("\nErro: Não vendedor não têm essa quantidade à venda");
+				System.out.println("\nErro: O vendedor não têm essa quantidade à venda");
+			if (n == 4)
+				System.out.println("\nErro: O seu saldo não é suficiente para fazer a compra");	
 
 		} catch (IOException | ClassNotFoundException e){
 			System.err.println(e.getMessage());
@@ -173,9 +201,9 @@ public class marketClient {
 			outStream.writeObject(quantity);
 			int n = (int) inStream.readObject();
 			if (n == 0)
-				System.out.println("\n Vinho adicionado ao catálogo com sucesso.");
+				System.out.println("\n Instrução de venda adicionada com sucesso.");
 			if (n == 1)
-				System.out.println("\nErro: Este vinho não existe.");
+				System.out.println("\nErro: Este vinho não existe no catálogo.");
 
 		} catch (IOException | ClassNotFoundException e){
 			System.err.println(e.getMessage());

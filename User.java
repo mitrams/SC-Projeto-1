@@ -11,13 +11,13 @@
  public class User {
      
      private String name;
-     private int balance;
+     private float balance;
      private LinkedHashMap<Integer,Wine> seller;
      private String password;
 
-     public User(String name, String password, int balance) throws IOException {
+     public User(String name, String password, float balance) throws IOException {
          this.name = name;
-         this.balance = 200;
+         this.balance = balance;
          this.password = password;
          this.seller = new LinkedHashMap<>();
  
@@ -27,7 +27,7 @@
          return name;
      }
  
-     public int getBalance() {
+     public float getBalance() {
          return balance;
      }
 
@@ -39,8 +39,12 @@
         return (password.equals(this.password));
     }
 
-    public void setBalance(int bal) {
+    public void setBalance(float bal) {
         this.balance = bal;
+    }
+
+    public void changeBalance(float bal) {
+        this.balance+=bal;
     }
 
     public LinkedHashMap<Integer,Wine> getWines() {
