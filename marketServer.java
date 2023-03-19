@@ -218,7 +218,7 @@ public class marketServer {
 		}
 
 		private void addComm() {
-			
+			String id;
 		}
 
 		private void sellComm() {
