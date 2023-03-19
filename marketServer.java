@@ -36,7 +36,6 @@ import java.util.Scanner;
 				 System.exit(-1);
 			 }
 		 }
- 
 		 System.out.println("servidor: main");
 		 marketServer server = new marketServer();
 		 server.startServer(args);
@@ -107,6 +106,8 @@ import java.util.Scanner;
  
 				 String user = null;
 				 String passwd = null;
+
+				 User u;
  
 				 try {
 					 user = (String) in.readObject();
@@ -127,71 +128,25 @@ import java.util.Scanner;
 					 // TODO: handle exception
 				 }
  
-				 System.out.println("Received: (utilizador: " + user + ", password: " + passwd + ")");
- 
-				 // Ir buscar a palavra-passe
-				 String dbPass = login_db.get(user);
- 
-				 boolean newUser = false;
- 
-				 if (dbPass == null) {
-					 login_db.put(user, passwd);
-					 newUser = true;
-				 } else if (!dbPass.equals(passwd)) {
-					 System.out.println("Password errada: " + dbPass);
-					 out.writeObject(false);
-					 return;
-				 }
- 
-				 // Confirmar o login
-				 out.writeObject(true);
- 
-/* 				 System.out.println("À espera do nome do ficheiro");
- 
-				 String fileName = receiveString(in);
- 
-				 if (fileName == null) {
-					 return;
-				 }
- 
-				 System.out.println("Recebido nome do ficheiro: " + fileName);
- 
-				 String filePath = "Server_Files/" + fileName;
- 
-				 File f = new File(filePath);
- 
-				 // System.out.println(filePath);
- 
-				 try {
-					 if (f.createNewFile()) {
-						 System.out.println("Ficheiro criado");
-					 } else {
-						 System.out.println("Ficheiro já existe");
-					 }
- 
-				 } catch (IOException e) {
-					 System.out.println("Ficheiro ou pasta inexistente: " + filePath);
-					 System.exit(-1);
-				 }
+				 System.out.println("Recebi: (utilizador: " + user + ", password: " + passwd + ")");
 
-				 
-				 File recFile = null;
-				 try {
-					 recFile = (File) in.readObject();
-				 } catch (Exception e) {
-					 return;
+				 if(uc.containsUser(user)) {
+					if(uc.validateUser(user,passwd)) {
+						u = uc.getUser(user);
+						out.writeObject(true);
+					}
+					else {
+						System.out.println("erro: Password errada");
+					 	out.writeObject(false);
+					 	return;
+					}
 				 }
- 
-				 FileReader fin = new FileReader(recFile);
-				 FileWriter output = new FileWriter(f);
- 
-				 char[] content = new char[1024];
-				 int bytesRead = fin.read(content);
- 
-				 System.out.println(content);
- 
-				 output.write(content, 0, bytesRead); */
-				// User userId = uc.getUser(user);
+				 else {
+					uc.registerUser(user, passwd);
+					System.out.println("Utilizador criado");
+					out.writeObject(true);
+				 }
+				 
 				 runCommands(in, out);
  
 			//	 fin.close();
@@ -252,7 +207,7 @@ import java.util.Scanner;
 			try {
 				outStream.writeObject(bal);
 			} catch (IOException e) {
-				// TODO Auto-generated catch block
+
 				e.printStackTrace();
 			}
 		
@@ -398,6 +353,7 @@ import java.util.Scanner;
  
 	 }
  
+
 	 class LoginInfo {
  
 		 private FileWriter out;
@@ -420,7 +376,7 @@ import java.util.Scanner;
 		 public boolean put(String user, String password) {
 			 if (this.get(user) == null) {
 				 try {
-					 String line = user + ";" + password + '\n';
+					 String line = user + ":" + password + '\n';
 					 out.write(line);
 					 out.flush();
 					 System.out.println(line);
@@ -432,6 +388,7 @@ import java.util.Scanner;
 				 return true;
 			 }
  
+			 
 			 return false;
 		 }
  
@@ -439,7 +396,7 @@ import java.util.Scanner;
  
 			 String line;
 			 String[] userPass;
-			 System.out.println("Has another line: " + sc.hasNextLine());
+			 System.out.println("Nova linha: " + sc.hasNextLine());
 			 while (sc.hasNextLine()) {
 				 line = sc.nextLine();
 				 System.out.println(line + " vs " + user);
@@ -474,7 +431,7 @@ import java.util.Scanner;
 		 public Wine get(String wine) {
 			 String line;
 			 String[] wineInfo;
-			 System.out.println("Has another line: " + sc.hasNextLine());
+			 System.out.println("Nova linha:  " + sc.hasNextLine());
 			 while (sc.hasNextLine()) {
 				 line = sc.nextLine();
 				 wineInfo = line.split(";");

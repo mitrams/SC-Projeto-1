@@ -1,1 +1,2 @@
-madalena;12345
+madalena:12345
+rui:54321

@@ -35,6 +35,10 @@
     	return this.password;
     }
 
+    public boolean validatePassword(String password) {
+        return (password.equals(this.password));
+    }
+
     public void setBalance(int bal) {
         this.balance = bal;
     }
