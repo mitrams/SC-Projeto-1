@@ -47,6 +47,9 @@ public class marketClient {
 					case ("a"):
 					case ("add"):
 						System.out.println("goto add");
+						if (!add(cmd)) {
+							System.out.println("Failed to add new wine");
+						}
 						break;
 					case ("s"):
 					case ("sell"):
@@ -108,7 +111,6 @@ public class marketClient {
 		System.out.print("password: ");
 		String pass = sc.next();
 
-
 		try {
 			out.writeObject(user);
 			out.writeObject(pass);
@@ -144,5 +146,43 @@ public class marketClient {
 			return;
 		}
 		System.out.println("Read");
+	}
+
+	public static boolean add(String[] cmd) {
+		if (!cmd[0].equals("add") && !cmd[0].equals("a")) {
+			System.out.println("Comando desconhecido");
+			return false;
+		}
+
+		if (cmd.length != 3) {
+			System.out.println("Número de argumentos errado");
+			return false;
+		}
+
+		String wineId = cmd[1];
+		File image = new File("Client_Files/" + cmd[2]);
+
+		if (!image.exists()) {
+			System.out.println("Ficheiro \"" + image.getName() + "\" não encontrado");
+			return false;
+		}
+
+		try {
+			outStream.writeObject("add");
+
+			outStream.writeUTF(wineId);
+			outStream.writeObject(image);
+
+			if (!inStream.readBoolean()) {
+				// Wine not added
+				return false;
+			}
+
+		} catch (IOException e) {
+			e.printStackTrace();
+			return false;
+		}
+
+		return true;
 	}
 }

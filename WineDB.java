@@ -12,9 +12,15 @@ public class WineDB {
     private Scanner sc;
     private FileWriter out;
 
-    public WineDB(String filePath) throws FileNotFoundException {
+    public WineDB(String filePath) throws IOException {
         File f = new File(filePath);
 
+        out = new FileWriter(f);
+        sc = new Scanner(f);
+    }
+
+    public WineDB(File f) throws IOException {
+        out = new FileWriter(f);
         sc = new Scanner(f);
     }
 
@@ -35,10 +41,15 @@ public class WineDB {
         return null;
     }
 
-    public boolean put(String wine, int value, int quantity, String imgPath) {
+    public boolean put(String wine, int value, int quantity, String seller, File img) {
         if (this.get(wine) == null) {
             try {
-                String line = wine + ";" + value + ";" + quantity + ";" + imgPath;
+                String line = wine + ";" 
+                            + (value == -1? "" : value) + ";" 
+                            + (quantity == -1? "" : quantity) + ";" 
+                            + (seller == null? "" : seller) + ";" 
+                            + img.getAbsolutePath();
+
                 out.write(line);
                 out.flush();
                 System.out.println(line);

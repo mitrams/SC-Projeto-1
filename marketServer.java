@@ -28,10 +28,10 @@ public class marketServer {
 
 	public static void main(String[] args) {
 		if (!ServerFolder.exists()) {
-		if (!ServerFolder.mkdirs()) {
-					System.out.println("Failed to create server folder");
+			if (!ServerFolder.mkdirs()) {
+				System.out.println("Failed to create server folder");
 				System.exit(-1);
-		}
+			}
 		}
 
 		if (!userLog.exists()) {
@@ -45,8 +45,8 @@ public class marketServer {
 
 		try {
 			wines = new WineDB(new File(ServerFolder, "wineInfo"));
-		} catch (FileNotFoundException e) {
-			System.out.println("Failed to create wine database file");
+		} catch (IOException e) {
+			System.out.println("Failed to initialize wine database");
 			System.exit(-1);
 		}
 
@@ -160,15 +160,25 @@ public class marketServer {
 
 				System.out.println("À espera do nome do ficheiro");
 
-				String fileName = receiveString(in);
+				String input = receiveString(in);
 
-				if (fileName == null) {
+				if (input == null) {
 					return;
 				}
 
-				System.out.println("Recebido nome do ficheiro: " + fileName);
+				switch (input) {
+					case "a":
+					case "add":
+						addComm(in);
+						break;
 
-				String filePath = "Server_Files/" + fileName;
+					default:
+						break;
+				}
+
+				System.out.println("Recebido nome do ficheiro: " + input);
+
+				String filePath = "Server_Files/" + input;
 
 				File f = new File(filePath);
 
@@ -216,11 +226,11 @@ public class marketServer {
 
 		}
 
-		private String receiveString(ObjectInputStream inStream) {
+		private String receiveString(ObjectInputStream in) {
 			Object received = null;
 
 			try {
-				received = inStream.readObject();
+				received = in.readObject();
 			} catch (Exception e) {
 				return null;
 			}
@@ -233,6 +243,46 @@ public class marketServer {
 		}
 
 		private synchronized void addComm(ObjectInputStream in) {
+			// Get wine id and image
+			String wineId = null;
+			File image = null;
+
+			try {
+				wineId = in.readUTF();
+				image = (File) in.readObject();
+			} catch (Exception e) {
+				try {
+					out.writeBoolean(false);
+				} catch (IOException e1) {
+					e1.printStackTrace();
+				}
+				e.printStackTrace();
+				return;
+			}
+
+			if (wineId == null && image == null) {
+				try {
+					out.writeBoolean(false);
+				} catch (IOException e1) {
+					e1.printStackTrace();
+				}
+				return;
+			}
+
+			if (!wines.put(wineId, -1, -1, null, image)) {
+				try {
+					out.writeBoolean(false);
+				} catch (IOException e1) {
+					e1.printStackTrace();
+				}
+				return;
+			}
+
+			try {
+				out.writeBoolean(true);
+			} catch (IOException e1) {
+				e1.printStackTrace();
+			}
 
 		}
 
@@ -266,6 +316,9 @@ public class marketServer {
 
 	}
 
+	/*
+	 * LoginInfo
+	 */
 	class LoginInfo {
 
 		private FileWriter out;
