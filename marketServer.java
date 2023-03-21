@@ -1,315 +1,359 @@
-
 /***************************************************************************
  *
  *   Seguranca e Confiabilidade 2020/21
  *
  ***************************************************************************/
 
-import java.io.File;
-import java.io.FileNotFoundException;
-import java.io.FileReader;
-import java.io.FileWriter;
-import java.io.IOException;
-import java.io.ObjectInputStream;
-import java.io.ObjectOutputStream;
-import java.net.ServerSocket;
-import java.net.Socket;
+ import java.io.File;
+ import java.io.FileNotFoundException;
+ import java.io.FileReader;
+ import java.io.FileWriter;
+ import java.io.IOException;
+ import java.io.ObjectInputStream;
+ import java.io.ObjectOutputStream;
+ import java.net.ServerSocket;
+ import java.net.Socket;
+
 import java.util.Scanner;
+ 
+ //Servidor myServer
+ 
+ public class marketServer {
+	
+	private UserCatalog uc = UserCatalog.getCatalog();
 
-//Servidor myServer
+	private WineCatalog wc = WineCatalog.getCatalog();
+ 
+	 public static File userLog;
 
-public class marketServer {
+ 
+	 public static void main(String[] args) {
+		 userLog = new File("userLog.txt");
+ 
+		 if (!userLog.exists()) {
+			 try {
+				 userLog.createNewFile();
+			 } catch (IOException e1) {
+				 e1.printStackTrace();
+				 System.exit(-1);
+			 }
+		 }
+		 System.out.println("servidor: main");
+		 marketServer server = new marketServer();
+		 server.startServer(args);
+	 }
+ 
+	 public void startServer(String[] args) {
+		 ServerSocket sSoc = null;
+ 
+		 int port = 12345;
+ 
+		 if (args.length != 0) {
+			 try {
+				 port = Integer.parseInt(args[0]);
+			 } catch (NumberFormatException e) {
+				 e.printStackTrace(System.err);
+			 }
+		 }
+ 
+		 try {
+			 sSoc = new ServerSocket(port);
+		 } catch (IOException e) {
+			 System.err.println(e.getMessage());
+			 System.exit(-1);
+		 }
+ 
+		 System.out.println("Server a correr.");
+ 
+		 while (true) {
+			 try {
+				 Socket inSoc = sSoc.accept();
+				 System.out.println("Cliente conectado");
+				 ServerThread newServerThread = new ServerThread(inSoc, userLog);
+				 newServerThread.start();
+			 } catch (IOException e) {
+				 e.printStackTrace();
+				 break;
+			 }
+ 
+		 }
+		 try {
+			 sSoc.close();
+		 } catch (IOException e) {
+			 e.printStackTrace();
+		 }
+	 }
+ 
+	 // Threads utilizadas para comunicacao com os clientes
+	 class ServerThread extends Thread {
+ 
+		 private Socket socket = null;
+ 
+		 ObjectOutputStream out = null;
+		 ObjectInputStream in = null;
+		 
+		 File userLog;
+ 
+		 ServerThread(Socket inSoc, File userLog) throws FileNotFoundException, IOException {
+			 socket = inSoc;
+			 this.userLog = userLog;
+ 
+			 System.out.println("thread do server para cada cliente");
+		 }
+ 
+		 public void run() {
+			 try {
+				 out = new ObjectOutputStream(socket.getOutputStream());
+				 in = new ObjectInputStream(socket.getInputStream());
+ 
+				 String user = null;
+				 String passwd = null;
 
-	public static File userLog;
+				 User u;
+ 
+				 try {
+					 user = (String) in.readObject();
+					 passwd = (String) in.readObject();
+					 System.out.println("thread: depois de receber a password e o user");
+				 } catch (ClassNotFoundException e1) {
+					 e1.printStackTrace();
+				 }
+ 
+				
+				 System.out.println("Recebi: (utilizador: " + user + ", password: " + passwd + ")");
 
-	public static void main(String[] args) {
-		userLog = new File("userLog.txt");
+				 if(uc.containsUser(user)) {
+					if(uc.validateUser(user,passwd)) {
+						u = uc.getUser(user);
+						out.writeObject(true);
+					}
+					else {
+						System.out.println("erro: Password errada");
+					 	out.writeObject(false);
+					 	return;
+					}
+				 }
+				 else {
+					uc.registerUser(user, passwd);
+					System.out.println("Utilizador criado");
+					u = uc.getUser(user);
+					out.writeObject(true);
+				 }
+				 
+				 runCommands(in, out, u);
+ 
+			//	 fin.close();
+			//	 output.close();
+				 out.close();
+				 in.close();
+ 
+				 socket.close();
+ 
+			 } catch (IOException e) {
+				 e.printStackTrace();
+			 }
+ 
+		 }
+		 private void runCommands(ObjectInputStream inStream, ObjectOutputStream outStream, User u) {
 
-		if (!userLog.exists()) {
+			Boolean b = false;
+			while (!b) {
+				try {
+					char command = (char) inStream.readObject();
+					switch (command) {
+						case 'a':
+							addWine(inStream, outStream, u);
+							break;
+						case 's':
+							sellWine(inStream, outStream, u);
+							break;
+						case 'v':
+							break;
+						case 'b':
+							buyWine(inStream, outStream, u);
+							break;
+						case 'w':
+							wallet(inStream, outStream, u);
+							break;
+						case 'c':
+							break;
+						case 't':
+							
+							break;
+						case 'r':	
+							break;
+					}
+				} catch (IOException e) {
+					System.err.println(e.getMessage());
+					System.exit(-1);
+				} catch (ClassNotFoundException e) {
+					System.err.println(e.getMessage());
+					System.exit(-1);
+				}
+			}
+		}
+	
+		private void wallet(ObjectInputStream inStream, ObjectOutputStream outStream, User user) {
+			
+		
+			float bal = user.getBalance();
 			try {
-				userLog.createNewFile();
-			} catch (IOException e1) {
-				e1.printStackTrace();
+				outStream.writeObject(bal);
+			} catch (IOException e) {
+
+				e.printStackTrace();
+			}
+		
+		}
+
+		private void addWine(ObjectInputStream inStream, ObjectOutputStream outStream, User u) {
+			try {
+				String name = (String) inStream.readObject();
+				String imgPath = (String) inStream.readObject();
+				System.out.println("recebi instrução add " +name + " "+ imgPath);
+
+				if(!wc.validateWine(name)) {
+					wc.addWine(name,imgPath);
+					try {
+						outStream.writeObject(0);
+					} catch (IOException e) {
+						e.printStackTrace();
+					}
+				}
+				else {
+					try {
+						outStream.writeObject(1);
+					} catch (IOException e) {
+						e.printStackTrace();
+					}
+				}
+			} catch (IOException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			} catch (ClassNotFoundException e) {
+				System.err.println(e.getMessage());
 				System.exit(-1);
 			}
 		}
 
-		System.out.println("servidor: main");
-		marketServer server = new marketServer();
-		server.startServer(args);
-	}
-
-	public void startServer(String[] args) {
-		ServerSocket sSoc = null;
-
-		int port = 12345;
-
-		if (args.length != 0) {
+		private void buyWine(ObjectInputStream inStream, ObjectOutputStream outStream, User u) {
 			try {
-				port = Integer.parseInt(args[0]);
-			} catch (NumberFormatException e) {
-				e.printStackTrace(System.err);
-			}
-		}
+				String name = (String) inStream.readObject();
+				String seller = (String) inStream.readObject();
+				int quantity = (int) inStream.readObject();
+				System.out.println("recebi instrução buy " +name + " "+ seller + " "+ quantity);
 
-		try {
-			sSoc = new ServerSocket(port);
-		} catch (IOException e) {
-			System.err.println(e.getMessage());
-			System.exit(-1);
-		}
-
-		System.out.println("Abri a porta " + port);
-
-		while (true) {
-			try {
-				Socket inSoc = sSoc.accept();
-				ServerThread newServerThread = new ServerThread(inSoc, userLog);
-				newServerThread.start();
+				if(!wc.validateWine(name)) {
+					outStream.writeObject(1);
+					return;
+				}
+				Wine w = wc.getWine(name);
+				Listing l = w.getSellerListing(seller);
+				if(l==null) {
+					outStream.writeObject(2);
+					return;
+				}
+				if(l.getQuantity()<quantity) {
+					outStream.writeObject(3);
+					return;
+				}
+				float trxValue=quantity*l.getValue();
+				if(u.getBalance()<trxValue) {
+					outStream.writeObject(4);
+					return;
+				}
+				l.sellQuantity(quantity);
+				u.changeBalance(-trxValue);
+				uc.getUser(seller).changeBalance(trxValue);
+				outStream.writeObject(0);		
 			} catch (IOException e) {
+				// TODO Auto-generated catch block
 				e.printStackTrace();
-				break;
+			} catch (ClassNotFoundException e) {
+				System.err.println(e.getMessage());
+				System.exit(-1);
 			}
+			wc.print();
 
 		}
-		try {
-			sSoc.close();
-		} catch (IOException e) {
-			e.printStackTrace();
-		}
-	}
 
-	// Threads utilizadas para comunicacao com os clientes
-	class ServerThread extends Thread {
-
-		private Socket socket = null;
-
-		File userLog;
-
-		ServerThread(Socket inSoc, File userLog) throws FileNotFoundException, IOException {
-			socket = inSoc;
-			this.userLog = userLog;
-
-			System.out.println("thread do server para cada cliente");
-		}
-
-		public void run() {
+		private void sellWine(ObjectInputStream inStream, ObjectOutputStream outStream, User u) {
 			try {
-				ObjectOutputStream outStream = new ObjectOutputStream(socket.getOutputStream());
-				ObjectInputStream inStream = new ObjectInputStream(socket.getInputStream());
+				String name = (String) inStream.readObject();
+				Float value = (Float) inStream.readObject();
+				int quantity = (int) inStream.readObject();
+				System.out.println("recebi instrução sell " +name + " "+ value + " "+ quantity);
 
-				String user = null;
-				String passwd = null;
-
-				try {
-					user = (String) inStream.readObject();
-					passwd = (String) inStream.readObject();
-					System.out.println("thread: depois de receber a password e o user");
-				} catch (ClassNotFoundException e1) {
-					e1.printStackTrace();
-				}
-
-				// TODO: refazer
-				// este codigo apenas exemplifica a comunicacao entre o cliente e o servidor
-				// nao faz qualquer tipo de autenticacao
-
-				LoginInfo login_db = null;
-				try {
-					login_db = new LoginInfo(userLog);
-				} catch (Exception e) {
-					// TODO: handle exception
-				}
-
-				System.out.println("Received: (user: " + user + ", pass: " + passwd + ")");
-
-				// Ir buscar a palavra-passe
-				String dbPass = login_db.get(user);
-
-				boolean newUser = false;
-
-				if (dbPass == null) {
-					login_db.put(user, passwd);
-					newUser = true;
-				} else if (!dbPass.equals(passwd)) {
-					System.out.println("Wrong password: " + dbPass);
-					outStream.writeObject(false);
-					return;
-				}
-
-				// Confirmar o login
-				outStream.writeObject(true);
-
-				System.out.println("À espera do nome do ficheiro");
-
-				String fileName = receiveString(inStream);
-
-				if (fileName == null) {
-					return;
-				}
-
-				System.out.println("Recebido nome do ficheiro: " + fileName);
-
-				String filePath = "Server_Files/" + fileName;
-
-				File f = new File(filePath);
-
-				// System.out.println(filePath);
-
-				try {
-					if (f.createNewFile()) {
-						System.out.println("Ficheiro criado");
-					} else {
-						System.out.println("Ficheiro já existe");
+				if(!wc.validateWine(name)) {
+					try {
+						outStream.writeObject(1);
+						return;
+					} catch (IOException e) {
+						e.printStackTrace();
 					}
-
-				} catch (IOException e) {
-					System.out.println("Ficheiro ou pasta inexistente: " + filePath);
-					System.exit(-1);
 				}
+				wc.addListing(name, u.getName(), value, quantity);
 
-				File recFile = null;
-				try {
-					recFile = (File) inStream.readObject();
-				} catch (Exception e) {
-					return;
-				}
+				outStream.writeObject(0);
 
-				FileReader fin = new FileReader(recFile);
-				FileWriter output = new FileWriter(f);
-
-				char[] content = new char[1024];
-				int bytesRead = fin.read(content);
-
-				System.out.println(content);
-
-				output.write(content, 0, bytesRead);
-
-				fin.close();
-				output.close();
-				outStream.close();
-				inStream.close();
-
-				socket.close();
-
+				
 			} catch (IOException e) {
+				// TODO Auto-generated catch block
 				e.printStackTrace();
+			} catch (ClassNotFoundException e) {
+				System.err.println(e.getMessage());
+				System.exit(-1);
 			}
-
+			wc.print();
 		}
 
 		private String receiveString(ObjectInputStream inStream) {
-			Object received = null;
+			 Object received = null;
+ 
+			 try {
+				 received = inStream.readObject();
+			 } catch (Exception e) {
+				 return null;
+			 }
+ 
+			 if (!(received instanceof String)) {
+				 return null;
+			 }
+ 
+			 return (String) received;
+		 }
+ 
+		 private synchronized void addComm(ObjectInputStream in) {
+ 
+		 }
+ 
 
-			try {
-				received = inStream.readObject();
-			} catch (Exception e) {
-				return null;
-			}
+		 private synchronized void viewComm(Wine wine) {
+ 
+		 }
+ 
+		 private synchronized void buyComm() {
+ 
+		 }
+ 
+		 private synchronized void walletComm() {
+ 
+		 }
+ 
+		 private synchronized void classifyComm() {
+ 
+		 }
+ 
+		 private synchronized void talkComm() {
+ 
+		 }
+ 
+		 private synchronized void readComm() {
+ 
+		 }
+ 
+	 }
+ 
 
-			if (!(received instanceof String)) {
-				return null;
-			}
-
-			return (String) received;
-		}
-
-		private void receiveTextFile(ObjectInputStream inStream) {
-
-		}
-
-		private void addComm() {
-			
-		}
-
-		private void sellComm() {
-			
-		}
-
-		private void viewComm() {
-			
-		}
-
-		private void buyComm() {
-			
-		}
-
-		private void walletComm() {
-			
-		}
-
-		private void classifyComm() {
-			
-		}
-
-		private void talkComm() {
-			
-		}
-
-		private void readComm() {
-			
-		}
-
-
-
-	}
-
-	class LoginInfo {
-
-		private FileWriter out;
-
-		Scanner sc = null;
-
-		public LoginInfo(File userInfo) throws FileNotFoundException {
-			sc = new Scanner(userInfo);
-			System.out.println(userInfo);
-
-			try {
-				out = new FileWriter(userInfo, true);
-			} catch (Exception e) {
-				// TODO: handle exception
-				System.out.println("Error: Falha na saída");
-				System.exit(-1);
-			}
-		}
-
-		public boolean put(String user, String password) {
-			if (this.get(user) == null) {
-				try {
-					String line = user + ";" + password + '\n';
-					out.write(line);
-					out.flush();
-					System.out.println(line);
-				} catch (IOException e) {
-					e.printStackTrace();
-					return false;
-				}
-
-				return true;
-			}
-
-			return false;
-		}
-
-		public String get(String user) {
-
-			String line;
-			String[] userPass;
-			System.out.println("Has another line: " + sc.hasNextLine());
-			while (sc.hasNextLine()) {
-				line = sc.nextLine();
-				System.out.println(line + " vs " + user);
-				System.out.flush();
-				userPass = line.split(";");
-
-				if (user.equals(userPass[0])) {
-					return userPass[1];
-				}
-
-			}
-
-			return null;
-		}
-
-	}
-
-}
+	
+ }
