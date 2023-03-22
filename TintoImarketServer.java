@@ -1,28 +1,27 @@
 /***************************************************************************
  *
- *   Seguranca e Confiabilidade 2020/21
- *
+ * Seguranca e Confiabilidade 2022/23
+ * Grupo 54
+ * Madalena Tomás 53464
  ***************************************************************************/
 
  import java.io.File;
  import java.io.FileNotFoundException;
- import java.io.FileReader;
- import java.io.FileWriter;
  import java.io.IOException;
  import java.io.ObjectInputStream;
  import java.io.ObjectOutputStream;
  import java.net.ServerSocket;
  import java.net.Socket;
 
-import java.util.Scanner;
  
  //Servidor myServer
  
- public class marketServer {
-	
+ public class TintoImarketServer{
 	private UserCatalog uc = UserCatalog.getCatalog();
 
 	private WineCatalog wc = WineCatalog.getCatalog();
+
+	private Wallets wallets = Wallets.getCatalog();
  
 	 public static File userLog;
 
@@ -39,7 +38,7 @@ import java.util.Scanner;
 			 }
 		 }
 		 System.out.println("servidor: main");
-		 marketServer server = new marketServer();
+		 TintoImarketServer server = new TintoImarketServer();
 		 server.startServer(args);
 	 }
  
@@ -135,6 +134,7 @@ import java.util.Scanner;
 				 }
 				 else {
 					uc.registerUser(user, passwd);
+					wallets.setBalance(user, 200);
 					System.out.println("Utilizador criado");
 					u = uc.getUser(user);
 					out.writeObject(true);
@@ -176,6 +176,7 @@ import java.util.Scanner;
 							wallet(inStream, outStream, u);
 							break;
 						case 'c':
+							classifyWine(inStream, outStream, u);
 							break;
 						case 't':
 							
@@ -193,10 +194,31 @@ import java.util.Scanner;
 			}
 		}
 	
+		private void classifyWine(ObjectInputStream inStream, ObjectOutputStream outStream, User u) {
+			try {
+				String name = (String) inStream.readObject();
+				int stars = (int) inStream.readObject();
+				System.out.println("recebi instrução classify " +name + " "+ stars);
+
+				if(!wc.validateWine(name)) {
+					outStream.writeObject(1);
+					return;
+				}
+				Wine w = wc.getWine(name);
+				w.classify(stars);
+				wc.writeFile();
+				outStream.writeObject(0);		
+			} catch (IOException e) {
+				e.printStackTrace();
+			} catch (ClassNotFoundException e) {
+				System.err.println(e.getMessage());
+				System.exit(-1);
+			}
+			wc.print();
+		}
+
 		private void wallet(ObjectInputStream inStream, ObjectOutputStream outStream, User user) {
-			
-		
-			float bal = user.getBalance();
+			float bal = wallets.getBalance(user.getName());
 			try {
 				outStream.writeObject(bal);
 			} catch (IOException e) {
@@ -206,6 +228,7 @@ import java.util.Scanner;
 		
 		}
 
+		
 		private void addWine(ObjectInputStream inStream, ObjectOutputStream outStream, User u) {
 			try {
 				String name = (String) inStream.readObject();
@@ -214,6 +237,7 @@ import java.util.Scanner;
 
 				if(!wc.validateWine(name)) {
 					wc.addWine(name,imgPath);
+					wc.writeFile();
 					try {
 						outStream.writeObject(0);
 					} catch (IOException e) {
@@ -228,7 +252,6 @@ import java.util.Scanner;
 					}
 				}
 			} catch (IOException e) {
-				// TODO Auto-generated catch block
 				e.printStackTrace();
 			} catch (ClassNotFoundException e) {
 				System.err.println(e.getMessage());
@@ -258,16 +281,16 @@ import java.util.Scanner;
 					return;
 				}
 				float trxValue=quantity*l.getValue();
-				if(u.getBalance()<trxValue) {
+				if(wallets.getBalance(u.getName())<trxValue) {
 					outStream.writeObject(4);
 					return;
 				}
 				l.sellQuantity(quantity);
-				u.changeBalance(-trxValue);
-				uc.getUser(seller).changeBalance(trxValue);
+				wallets.changeBalance(u.getName(),-trxValue);
+				wallets.changeBalance(uc.getUser(seller).getName(),trxValue);
+				wc.writeFile();
 				outStream.writeObject(0);		
 			} catch (IOException e) {
-				// TODO Auto-generated catch block
 				e.printStackTrace();
 			} catch (ClassNotFoundException e) {
 				System.err.println(e.getMessage());
@@ -293,12 +316,12 @@ import java.util.Scanner;
 					}
 				}
 				wc.addListing(name, u.getName(), value, quantity);
+				wc.writeFile();
 
 				outStream.writeObject(0);
 
 				
 			} catch (IOException e) {
-				// TODO Auto-generated catch block
 				e.printStackTrace();
 			} catch (ClassNotFoundException e) {
 				System.err.println(e.getMessage());
@@ -307,50 +330,7 @@ import java.util.Scanner;
 			wc.print();
 		}
 
-		private String receiveString(ObjectInputStream inStream) {
-			 Object received = null;
- 
-			 try {
-				 received = inStream.readObject();
-			 } catch (Exception e) {
-				 return null;
-			 }
- 
-			 if (!(received instanceof String)) {
-				 return null;
-			 }
- 
-			 return (String) received;
-		 }
- 
-		 private synchronized void addComm(ObjectInputStream in) {
- 
-		 }
- 
-
-		 private synchronized void viewComm(Wine wine) {
- 
-		 }
- 
-		 private synchronized void buyComm() {
- 
-		 }
- 
-		 private synchronized void walletComm() {
- 
-		 }
- 
-		 private synchronized void classifyComm() {
- 
-		 }
- 
-		 private synchronized void talkComm() {
- 
-		 }
- 
-		 private synchronized void readComm() {
- 
-		 }
+		
  
 	 }
  

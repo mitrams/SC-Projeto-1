@@ -1,23 +1,16 @@
 import java.io.File;
-
 import java.io.FileNotFoundException;
-import java.io.FileOutputStream;
 import java.io.FileWriter;
 import java.io.IOException;
-
-import java.io.ObjectOutputStream;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Scanner;
-import java.util.Map.Entry;
 
-import javax.swing.text.html.HTMLDocument.Iterator;
 
 public class UserCatalog {
 
     private Map<String,User> users;
     private File userFile;
-    private File userDB;
     private static UserCatalog INSTANCE = new UserCatalog();
 
     public static UserCatalog getCatalog() {
@@ -27,7 +20,6 @@ public class UserCatalog {
     private UserCatalog() {
         users = new HashMap<>();
         userFile = new File("userLog.txt");
-       // userDB = new File("userDB.txt");
         readFile();
     }
 
@@ -73,7 +65,6 @@ public class UserCatalog {
             writeFile();
         //    refreshFile(user);
         } catch (IOException e) {
-            // TODO Auto-generated catch block
             e.printStackTrace();
         }
 
@@ -83,7 +74,6 @@ public class UserCatalog {
      * Writes texy file with usernames and passwords
      */
     private void writeFile() {
-        System.out.println("WriteFile");
         try {
             FileWriter out = new FileWriter(this.userFile);
 

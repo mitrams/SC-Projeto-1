@@ -1,4 +1,6 @@
-public class Listing {
+import java.io.Serializable;
+
+public class Listing  implements Serializable {
     private  String seller;
     private Float value;
     private int quantity;
@@ -9,16 +11,13 @@ public class Listing {
         this.quantity = quantity;
     }
 
-    
 	public String getSeller() {
 		return seller;
 	}
-
     
 	public Float getValue() {
 		return value;
 	}
-
     
 	public int getQuantity() {
 		return quantity;

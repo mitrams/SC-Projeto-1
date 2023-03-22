@@ -1,3 +1,4 @@
+import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -5,7 +6,7 @@ import java.util.List;
 /**
  * wine
  */
-public class Wine {
+public class Wine  implements Serializable {
     private String name;
     private int stars = 0;
     private String imgPath;
@@ -52,8 +53,4 @@ public class Wine {
     return null;
   }
 
-
-   // public String sellerId(){
-     //   return sellerId();
-   // }
 }

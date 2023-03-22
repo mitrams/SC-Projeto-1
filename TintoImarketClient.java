@@ -1,4 +1,10 @@
-import java.io.File;
+/***************************************************************************
+ *
+ * Seguranca e Confiabilidade 2022/23
+ * Grupo 54
+ * Madalena Tomás 53464
+ ***************************************************************************/
+
 import java.io.IOException;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
@@ -6,7 +12,7 @@ import java.net.Socket;
 import java.net.UnknownHostException;
 import java.util.Scanner;
 
-public class marketClient {
+public class TintoImarketClient {
 
 	public static void main(String[] args) throws IOException {
 
@@ -19,7 +25,9 @@ public class marketClient {
 			boolean ans = false;
 			// while (!ans) {
 			// }
-			ans = login(inStream, outStream);
+			Scanner sc = new Scanner(System.in);
+			ans = login(inStream, outStream, sc);
+			
 
 			if (!ans) {
 				System.out.println("Wrong username or password, please try again");
@@ -28,7 +36,7 @@ public class marketClient {
 
 			System.out.println("Welcome!");
 
-			Scanner sc = new Scanner(System.in);
+			//sc = new Scanner(System.in);
 			boolean exit = false;
 			while (exit == !true) {
 				System.out.print("> ");
@@ -43,12 +51,10 @@ public class marketClient {
 						break;
 					case ("a"):
 					case ("add"):
-						System.out.println("goto add");
 						addWine(inStream,outStream,cmd);
 						break;
 					case ("s"):
 					case ("sell"):
-						System.out.println("goto sell");
 						sellWine(inStream,outStream,cmd);
 						break;
 					case ("v"):
@@ -57,17 +63,15 @@ public class marketClient {
 						break;
 					case ("b"):
 					case ("buy"):
-						System.out.println("goto buy");
 						buyWine(inStream,outStream,cmd);
 						break;
 					case ("w"):
 					case ("wallet"):
-						System.out.println("goto wallet");
 						wallet(inStream,outStream,cmd);
 						break;
 					case ("c"):
 					case ("classify"):
-						System.out.println("goto classify");
+						classifyWine(inStream, outStream, cmd);
 						break;
 					case ("t"):
 					case ("talk"):
@@ -91,13 +95,40 @@ public class marketClient {
 			socket.close();
 
 		} catch (UnknownHostException e) {
-			// TODO Auto-generated catch block
 			e.printStackTrace();
 		} catch (IOException e) {
-			// TODO Auto-generated catch block
 			e.printStackTrace();
 		}
 
+	}
+
+	private static void classifyWine(ObjectInputStream inStream, ObjectOutputStream outStream, String[] cmd) {
+		try{
+			if(cmd.length !=3){
+				System.out.println("Erro: Insira o input assim classify <wine> <stars>.");
+				return;
+			}
+
+			int stars =  Integer.parseInt(cmd[2]);
+			if(stars<1 || stars>5){
+				System.out.println("A classificação tem de ser de 1 a 5 estrelas.");
+				return;
+			}
+
+			outStream.writeObject('c');
+			String wine = cmd[1];
+	
+			outStream.writeObject(wine);
+			outStream.writeObject(stars);
+			int n = (int) inStream.readObject();
+			if (n == 0)
+				System.out.println("\n Vinho classificado com sucesso.");
+			if (n == 1)
+				System.out.println("\nErro: Este vinho não existe.");
+		} catch (IOException | ClassNotFoundException e){
+			System.err.println(e.getMessage());
+			System.exit(-1);
+		}
 	}
 
 	private static void wallet(ObjectInputStream inStream, ObjectOutputStream outStream, String[] cmd) {
@@ -106,7 +137,6 @@ public class marketClient {
 			float bal = (float) inStream.readObject();
 			System.out.println("Saldo: " + bal);
 		} catch (ClassNotFoundException | IOException e) {
-			// TODO Auto-generated catch block
 			e.printStackTrace();
 		}
 		
@@ -213,34 +243,32 @@ public class marketClient {
 	}
 
 	private static void help() {
-		System.out.println("\n----------------------------------------\n");
-        System.out.println("Menu:\n");
-        System.out.println("add");
-        System.out.println("sell");
-        System.out.println("view ");
-        System.out.println("buy");
-        System.out.println("wallet");
-        System.out.println("classify");
-        System.out.println("talk");
-        System.out.println("read");
-        System.out.println("exit");
+		//System.out.println("----------------------------------------\n");
+        System.out.println("\n(h)elp:\t\tInformacao sobre todos os comandos disponiveis");
+        System.out.println("(a)dd:\t\tAdicionar um vinho");
+        System.out.println("(s)ell:\t\tColocar um vinho a venda");
+        System.out.println("(v)iew:\t\tObter informacoes sobre um vinho");
+        System.out.println("(b)uy:\t\tComprar um vinho");
+        System.out.println("(w)allet:\tObter informacao sobre o saldo do utilizador");
+        System.out.println("(c)lassify:\tAtribuir uma classificacao de 1 a 5 a um vinho");
+        System.out.println("(t)alk:\t\tEnviar uma mensagem a outro utilizador");
+        System.out.println("(r)ead:\t\tLer as novas mensagens recebidas");
+        System.out.println("(e)xit:\t\tSair do programa\n");
 	}
 
-	public static boolean login(ObjectInputStream in, ObjectOutputStream out) {
-		Scanner sc = new Scanner(System.in);
-
+	public static boolean login(ObjectInputStream in, ObjectOutputStream out, Scanner sc) {
+		
 		System.out.print("username: ");
-		String user = sc.next();
+		String user = sc.nextLine();
 
 		System.out.print("password: ");
-		String pass = sc.next();
+		String pass = sc.nextLine();
 
 
 		try {
 			out.writeObject(user);
 			out.writeObject(pass);
 		} catch (IOException e) {
-			// TODO Auto-generated catch block
 			e.printStackTrace();
 		}
 
@@ -248,14 +276,11 @@ public class marketClient {
 			return (boolean) in.readObject();
 			
 		} catch (ClassNotFoundException e) {
-			// TODO Auto-generated catch block
 			e.printStackTrace();
 		} catch (IOException e) {
-			// TODO Auto-generated catch block
 			e.printStackTrace();
 		}
 		
-		sc.close();
 		return false;
 	}
 
