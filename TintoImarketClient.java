@@ -35,6 +35,7 @@ public class TintoImarketClient {
 			}
 
 			System.out.println("Welcome!");
+			help();
 
 			//sc = new Scanner(System.in);
 			boolean exit = false;
@@ -145,7 +146,7 @@ public class TintoImarketClient {
 	private static void addWine(ObjectInputStream inStream, ObjectOutputStream outStream, String[] cmd)  {
 		try{
 			if(cmd.length !=3){
-				System.out.println("Erro: Insira o input assim sell <wine> <value> <quantity>.");
+				System.out.println("Erro: Insira o input assim add <wine> <image>.");
 				return;
 			}
 
