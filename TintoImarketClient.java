@@ -3,29 +3,32 @@
  * Seguranca e Confiabilidade 2022/23
  * Grupo 54
  * Madalena Tomás 53464
+ * Francisco Cardoso 57547
  ***************************************************************************/
 
 import java.io.IOException;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
 import java.net.Socket;
-import java.net.UnknownHostException;
+import java.util.Arrays;
 import java.util.Scanner;
 
 public class TintoImarketClient {
 
 	public static void main(String[] args) throws IOException {
-
+		Socket socket = null;
+		ObjectInputStream inStream = null;
+		ObjectOutputStream outStream = null;
+		Scanner sc = null;
 		try {
-			Socket socket = new Socket("127.0.0.1", 12345);
-
-			ObjectInputStream inStream = new ObjectInputStream(socket.getInputStream());
-			ObjectOutputStream outStream = new ObjectOutputStream(socket.getOutputStream());
+			socket = new Socket("127.0.0.1", 12345);
+			inStream = new ObjectInputStream(socket.getInputStream());
+			outStream = new ObjectOutputStream(socket.getOutputStream());
+			sc = new Scanner(System.in);
 
 			boolean ans = false;
 			// while (!ans) {
 			// }
-			Scanner sc = new Scanner(System.in);
 			ans = login(inStream, outStream, sc);
 			
 
@@ -35,7 +38,7 @@ public class TintoImarketClient {
 			}
 
 			System.out.println("Welcome!");
-			help();
+			//help();
 
 			//sc = new Scanner(System.in);
 			boolean exit = false;
@@ -45,60 +48,48 @@ public class TintoImarketClient {
 				String input = sc.nextLine();
 				String[] cmd = input.split(" ");
 
-				switch(cmd[0]) {
-					case ("e"):
-					case ("exit"):
+				switch(cmd[0].charAt(0)) {
+					case ('e'):
 						exit = true;
 						break;
-					case ("a"):
-					case ("add"):
+					case ('a'):
 						addWine(inStream,outStream,cmd);
 						break;
-					case ("s"):
-					case ("sell"):
+					case ('s'):
 						sellWine(inStream,outStream,cmd);
 						break;
-					case ("v"):
-					case ("view"):
+					case ('v'):
 						System.out.println("goto view");
 						break;
-					case ("b"):
-					case ("buy"):
+					case ('b'):
 						buyWine(inStream,outStream,cmd);
 						break;
-					case ("w"):
-					case ("wallet"):
-						wallet(inStream,outStream,cmd);
+					case ('w'):
+						wallet(inStream,outStream);
 						break;
-					case ("c"):
-					case ("classify"):
+					case ('c'):
 						classifyWine(inStream, outStream, cmd);
 						break;
-					case ("t"):
-					case ("talk"):
-						talk(cmd);
+					case ('t'):
+						talk(inStream, outStream, cmd);
 						break;
-					case ("r"):
-					case ("read"):
-						read(cmd);
+					case ('r'):
+						read(inStream, outStream, cmd);
 						break;
-					case ("h"):
-					case ("help"):
+					case ('h'):
 						help();
 						break;
 					default:
 						System.out.println("--> \'" + cmd[0] + "\' - Comando desconhecido");
 				}
 			}
+		} catch (IOException e) {
+			e.printStackTrace();
+		} finally {
 			inStream.close();
 			outStream.close();
 			sc.close();
-			socket.close();
-
-		} catch (UnknownHostException e) {
-			e.printStackTrace();
-		} catch (IOException e) {
-			e.printStackTrace();
+			socket.close();		
 		}
 
 	}
@@ -132,7 +123,7 @@ public class TintoImarketClient {
 		}
 	}
 
-	private static void wallet(ObjectInputStream inStream, ObjectOutputStream outStream, String[] cmd) {
+	private static void wallet(ObjectInputStream inStream, ObjectOutputStream outStream) {
 		try {
 			outStream.writeObject('w');
 			float bal = (float) inStream.readObject();
@@ -243,6 +234,57 @@ public class TintoImarketClient {
 		
 	}
 
+	private static void talk(ObjectInputStream inStream, ObjectOutputStream outStream, String[] cmd){
+		try{
+			// Manda o comando para o server
+			outStream.writeObject(cmd[0].charAt(0));
+			
+			// Manda par ao server o nome a quem e mandada a mensagem
+			String toWhom = cmd[1];
+			outStream.writeObject(toWhom);
+			// Apenas manda a mensagem caso o tulizador exista
+			if((boolean) inStream.readObject()) {
+				outStream.writeObject(Arrays.copyOfRange(cmd, 2, cmd.length));
+				System.out.println("Mensagem enviada!");
+			} else {
+				System.out.println("O utlizador "+toWhom+" nao existe");
+			}
+		}  catch (IOException | ClassNotFoundException e){
+			System.err.println(e.getMessage());
+			System.exit(-1);
+		}
+		
+	}
+
+	private static void read(ObjectInputStream inStream, ObjectOutputStream outStream, String[] cmd){
+		try {
+			// O comando read nao recebe argumentos
+			if(cmd.length != 1) {
+				System.out.println("Numero de argumentos errado");
+				return;
+			}
+			// Manda o comando para o server
+			outStream.writeObject(cmd[0].charAt(0));
+			
+			// Recebe do server se existem mensagens para ler ou nao
+			String msgState = (String) inStream.readObject();
+			if(msgState.equals("Estas sao todas as mensagens novas")) {
+				// Recebe do server as mensagens para ler
+				long numMsg = (long) inStream.readObject();
+				for(int i=0; i<numMsg; i++) {
+					System.out.println((String) inStream.readObject());
+				}
+			}
+
+			// Relata o estado das mensagens 
+			System.out.println(msgState);
+		}  catch (IOException | ClassNotFoundException e){
+			System.err.println(e.getMessage());
+			System.exit(-1);
+		}
+			
+	}
+
 	private static void help() {
 		//System.out.println("----------------------------------------\n");
         System.out.println("\n(h)elp:\t\tInformacao sobre todos os comandos disponiveis");
@@ -285,19 +327,4 @@ public class TintoImarketClient {
 		return false;
 	}
 
-	public static void talk(String[] cmd){
-		if(cmd.length != 3) {
-			System.out.println("Numero de argumentos errado");
-			return;
-		}
-		System.out.println("Talk");
-	}
-
-	public static void read(String[] cmd){
-		if(cmd.length != 1) {
-			System.out.println("Numero de argumentos errado");
-			return;
-		}
-		System.out.println("Read");
-	}
 }

@@ -71,7 +71,7 @@ public class UserCatalog {
     }
 
     /**
-     * Writes texy file with usernames and passwords
+     * Writes text file with usernames and passwords
      */
     private void writeFile() {
         try {
