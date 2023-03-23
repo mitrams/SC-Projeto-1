@@ -1,7 +1,7 @@
 import java.io.File;
-import java.io.FileNotFoundException;
 import java.io.FileWriter;
 import java.io.IOException;
+import java.nio.charset.StandardCharsets;
 import java.util.Scanner;
 
 /**
@@ -15,7 +15,7 @@ public class WineDB {
     public WineDB(String filePath) throws IOException {
         File f = new File(filePath);
 
-        out = new FileWriter(f);
+        out = new FileWriter(f, StandardCharsets.UTF_8);
         sc = new Scanner(f);
     }
 
@@ -42,26 +42,31 @@ public class WineDB {
     }
 
     public boolean put(String wine, int value, int quantity, String seller, File img) {
-        if (this.get(wine) == null) {
+        if (!(this.get(wine) == null)) {
             try {
-                String line = wine + ";" 
-                            + (value == -1? "" : value) + ";" 
-                            + (quantity == -1? "" : quantity) + ";" 
-                            + (seller == null? "" : seller) + ";" 
-                            + img.getAbsolutePath();
-
-                out.write(line);
-                out.flush();
-                System.out.println(line);
+                out.write("");
             } catch (IOException e) {
                 e.printStackTrace();
                 return false;
             }
+        }
+        
+        try {
+            String line = wine + ";" 
+                        + (value == -1? "" : value) + ";" 
+                        + (quantity == -1? "" : quantity) + ";" 
+                        + (seller == null? "" : seller) + ";" 
+                        + img.getAbsolutePath();
 
-            return true;
+            out.write(line);
+            out.flush();
+            System.out.println(line);
+        } catch (IOException e) {
+            e.printStackTrace();
+            return false;
         }
 
-        return false;
+        return true;
     }
 
 }
