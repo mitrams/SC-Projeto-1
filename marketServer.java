@@ -112,8 +112,11 @@ public class marketServer {
 
 		private Socket socket = null;
 
-		ObjectOutputStream out = null;
-		ObjectInputStream in = null;
+		InputStream is = null;
+		OutputStream os = null;
+
+		ObjectInputStream ois = null;
+		ObjectOutputStream oos = null;
 
 		File userLog;
 
@@ -126,8 +129,11 @@ public class marketServer {
 
 		public void run() {
 			try {
-				out = new ObjectOutputStream(socket.getOutputStream());
-				in = new ObjectInputStream(socket.getInputStream());
+				is = socket.getInputStream();
+				os = socket.getOutputStream();
+
+				ois = new ObjectInputStream(is);
+				oos = new ObjectOutputStream(os);
 
 				String user = null;
 				String passwd = null;
