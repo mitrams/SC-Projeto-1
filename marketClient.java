@@ -11,6 +11,8 @@ public class marketClient {
 	static ObjectInputStream inStream;
 	static ObjectOutputStream outStream;
 
+	static Scanner sc;
+
 	public static void main(String[] args) throws IOException {
 
 		try {
@@ -31,7 +33,7 @@ public class marketClient {
 
 			System.out.println("Welcome!");
 
-			Scanner sc = new Scanner(System.in);
+			sc = new Scanner(System.in);
 			boolean exit = false;
 			while (exit == !true) {
 				System.out.print("> ");
@@ -39,7 +41,7 @@ public class marketClient {
 				String input = sc.nextLine();
 				String[] cmd = input.split(" ");
 
-				switch(cmd[0]) {
+				switch (cmd[0]) {
 					case ("e"):
 					case ("exit"):
 						exit = true;
@@ -58,6 +60,7 @@ public class marketClient {
 					case ("v"):
 					case ("view"):
 						System.out.println("goto view");
+						view(cmd);
 						break;
 					case ("b"):
 					case ("buy"):
@@ -168,15 +171,17 @@ public class marketClient {
 		}
 
 		try {
-			outStream.writeObject("add");
+			outStream.writeObject("add"); // sinalizar o tipo de comando
 
-			outStream.writeUTF(wineId);
-			outStream.writeObject(image);
+			outStream.writeUTF(wineId); // enviar o id do vinho
+			outStream.writeObject(image); // enviar a imagem do vinho
 
-			if (!inStream.readBoolean()) {
-				// Wine not added
-				return false;
-			}
+			/*
+			 * if (!inStream.readBoolean()) {
+			 * // Wine not added
+			 * return false;
+			 * }
+			 */
 
 		} catch (IOException e) {
 			e.printStackTrace();
@@ -185,4 +190,43 @@ public class marketClient {
 
 		return true;
 	}
+
+	public static boolean view(String[] cmd) {
+		if (!cmd[0].equals("view") && !cmd[0].equals("v")) {
+			System.out.println("Comando desconhecido");
+			return false;
+		}
+
+		if (cmd.length != 2) {
+			System.out.println("Número de argumentos errado");
+			return false;
+		}
+
+		try {
+			outStream.writeObject("view"); // sinalizar o tipo de comando
+			outStream.writeUTF(cmd[1]); // enviar o id do vinho
+			System.out.println("\tEnviado id: " + cmd[1]);
+		} catch (IOException e) {
+			e.printStackTrace();
+		}
+
+		try {
+			Wine wine = (Wine) inStream.readObject();
+			if (wine instanceof Wine) {	
+				System.out.println(wine);
+
+				return true;
+			} else {
+				return false;
+			}
+		} catch (ClassNotFoundException | IOException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+			return false;
+		}
+
+		
+
+	}
+
 }

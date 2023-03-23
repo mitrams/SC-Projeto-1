@@ -5,13 +5,19 @@
  *
  ***************************************************************************/
 
+import java.io.BufferedInputStream;
+import java.io.BufferedOutputStream;
 import java.io.File;
+import java.io.FileInputStream;
 import java.io.FileNotFoundException;
+import java.io.FileOutputStream;
 import java.io.FileReader;
 import java.io.FileWriter;
 import java.io.IOException;
+import java.io.InputStream;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
+import java.io.OutputStream;
 import java.net.ServerSocket;
 import java.net.Socket;
 import java.util.Scanner;
@@ -20,16 +26,23 @@ import java.util.Scanner;
 
 public class marketServer {
 
-	final static File  ServerFolder = new File("Server_Files");
-	final static File userLog = new File(ServerFolder, "loginInfo");
+	final static File serverFolder = new File("Server_Files");
+	final static File imagesFolder = new File(serverFolder, "Images");
+	final static File userLog = new File(serverFolder, "loginInfo");
 
 	static WineDB wines;
 
-
 	public static void main(String[] args) {
-		if (!ServerFolder.exists()) {
-			if (!ServerFolder.mkdirs()) {
+		if (!serverFolder.exists()) {
+			if (!serverFolder.mkdirs()) {
 				System.out.println("Failed to create server folder");
+				System.exit(-1);
+			}
+		}
+
+		if (!imagesFolder.exists()) {
+			if (!imagesFolder.mkdirs()) {
+				System.out.println("Failed to create images folder");
 				System.exit(-1);
 			}
 		}
@@ -44,13 +57,12 @@ public class marketServer {
 		}
 
 		try {
-			wines = new WineDB(new File(ServerFolder, "wineInfo"));
+			wines = new WineDB(new File(serverFolder, "wineInfo"));
 		} catch (IOException e) {
 			System.out.println("Failed to initialize wine database");
 			System.exit(-1);
 		}
 
-		System.out.println("servidor: main");
 		marketServer server = new marketServer();
 		server.startServer(args);
 	}
@@ -102,14 +114,14 @@ public class marketServer {
 
 		ObjectOutputStream out = null;
 		ObjectInputStream in = null;
-		
+
 		File userLog;
 
 		ServerThread(Socket inSoc, File userLog) throws FileNotFoundException, IOException {
 			socket = inSoc;
 			this.userLog = userLog;
 
-			System.out.println("thread do server para cada cliente");
+			System.out.println("\tNova thread");
 		}
 
 		public void run() {
@@ -123,7 +135,6 @@ public class marketServer {
 				try {
 					user = (String) in.readObject();
 					passwd = (String) in.readObject();
-					System.out.println("thread: depois de receber a password e o user");
 				} catch (ClassNotFoundException e1) {
 					e1.printStackTrace();
 				}
@@ -158,8 +169,6 @@ public class marketServer {
 				// Confirmar o login
 				out.writeObject(true);
 
-				System.out.println("À espera do nome do ficheiro");
-
 				String input = receiveString(in);
 
 				if (input == null) {
@@ -169,14 +178,18 @@ public class marketServer {
 				switch (input) {
 					case "a":
 					case "add":
-						addComm(in);
+						addComm();
+						break;
+
+					case "view":
+						viewComm();
 						break;
 
 					default:
 						break;
 				}
 
-				System.out.println("Recebido nome do ficheiro: " + input);
+				/* System.out.println("Recebido nome do ficheiro: " + input);
 
 				String filePath = "Server_Files/" + input;
 
@@ -214,7 +227,7 @@ public class marketServer {
 				output.write(content, 0, bytesRead);
 
 				fin.close();
-				output.close();
+				output.close(); */
 				out.close();
 				in.close();
 
@@ -242,14 +255,14 @@ public class marketServer {
 			return (String) received;
 		}
 
-		private synchronized void addComm(ObjectInputStream in) {
+		private synchronized void addComm() {
 			// Get wine id and image
 			String wineId = null;
-			File image = null;
+			File receivedFile = null;
 
 			try {
 				wineId = in.readUTF();
-				image = (File) in.readObject();
+				receivedFile = (File) in.readObject();
 			} catch (Exception e) {
 				try {
 					out.writeBoolean(false);
@@ -260,7 +273,31 @@ public class marketServer {
 				return;
 			}
 
-			if (wineId == null && image == null) {
+			if (wineId == null && receivedFile == null) {
+				try {
+					out.writeBoolean(false);
+				} catch (IOException e1) {
+					e1.printStackTrace();
+				}
+				return;
+			}
+
+			File image = new File(imagesFolder, receivedFile.getName());
+
+			try (
+					InputStream fin = new BufferedInputStream(
+							new FileInputStream(receivedFile));
+					OutputStream fout = new BufferedOutputStream(
+							new FileOutputStream(image))) {
+
+				byte[] buffer = new byte[1024];
+				int lengthRead;
+				while ((lengthRead = fin.read(buffer)) > 0) {
+					fout.write(buffer, 0, lengthRead);
+					fout.flush();
+				}
+			} catch (Exception e) {
+				System.out.println("Error copying image contents: " + e.getMessage());
 				try {
 					out.writeBoolean(false);
 				} catch (IOException e1) {
@@ -290,7 +327,37 @@ public class marketServer {
 
 		}
 
-		private synchronized void viewComm(Wine wine) {
+		private synchronized void viewComm() {
+			String id = null;
+			try {
+				id = in.readUTF();
+			} catch (IOException e) {
+				System.out.println("Failed to receive wineID from view: " + e.getMessage());
+				return;
+			}
+
+			if (id == null) {
+				// Empty id
+				return;
+			}
+
+			Wine wine = wines.get(id);
+
+			if (wine == null) {
+				// Wine not found
+				return;
+			}
+
+			try {
+				System.out.println(wine);
+				out.writeObject(wine);
+			} catch (IOException e) {
+				System.out.println("Failed to send wine Object from view: " + e.getMessage());
+				return;
+			}
+
+			
+
 
 		}
 
@@ -327,7 +394,7 @@ public class marketServer {
 
 		public LoginInfo(File userInfo) throws FileNotFoundException {
 			sc = new Scanner(userInfo);
-			System.out.println(userInfo);
+			// System.out.println(userInfo);
 
 			try {
 				out = new FileWriter(userInfo, true);
@@ -344,7 +411,7 @@ public class marketServer {
 					String line = user + ";" + password + '\n';
 					out.write(line);
 					out.flush();
-					System.out.println(line);
+					// System.out.println(line);
 				} catch (IOException e) {
 					e.printStackTrace();
 					return false;
@@ -360,10 +427,9 @@ public class marketServer {
 
 			String line;
 			String[] userPass;
-			System.out.println("Has another line: " + sc.hasNextLine());
 			while (sc.hasNextLine()) {
 				line = sc.nextLine();
-				System.out.println(line + " vs " + user);
+				System.out.println("Login: " + line);
 				System.out.flush();
 				userPass = line.split(";");
 
@@ -377,6 +443,5 @@ public class marketServer {
 		}
 
 	}
-
 
 }
