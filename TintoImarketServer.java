@@ -5,6 +5,7 @@
  * Grupo 54
  * Madalena Tomás 53464
  * Francisco Cardoso 57547
+ * 
  ***************************************************************************/
 
 import java.io.File;
@@ -71,8 +72,15 @@ public class TintoImarketServer {
 		if (args.length != 0) {
 			try {
 				port = Integer.parseInt(args[0]);
+
+				if (port < 0 || port > 65535) {
+					
+				}
+
 			} catch (NumberFormatException e) {
-				e.printStackTrace(System.err);
+				System.out.println("Formato incorreto da porta, a utilizar a porta '12345'");
+			} catch (IllegalArgumentException e) {
+				System.out.println("Porta fora dos valores válidos, a utilizar a porta '12345'");
 			}
 		}
 
