@@ -17,7 +17,7 @@ import java.net.Socket;
 import java.util.Arrays;
 import java.util.Scanner;
 
-public class TintoImarketClient {
+public class TintoImarket {
 
 	final static File userFolder = new File("Client_Files");
 	
