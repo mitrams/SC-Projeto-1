@@ -20,6 +20,8 @@ import java.net.Socket;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Scanner;
 
 //Servidor myServer
@@ -177,17 +179,15 @@ public class TintoImarketServer {
 		}
 
 		private void runCommands(User u) {
-
-			Boolean b = false;
-			while (!b) {
+			while (true) {
 				try {
 					System.out.println("Waiting for commands...");
 					char command = (char) ois.readObject();
 
 					switch (command) {
 						case 'e':
-							System.out.println(u.getName() + "saiu");
-							break;
+							System.out.println(u.getName() + " saiu");
+							return;
 						case 'a':
 							System.out.println("ADD");
 							addWine(ois, oos);
@@ -216,7 +216,7 @@ public class TintoImarketServer {
 					}
 				} catch (IOException | ClassNotFoundException e) {
 					System.err.println(e.getMessage());
-					System.exit(-1);
+					return;
 				}
 			}
 		}
@@ -582,22 +582,23 @@ public class TintoImarketServer {
 			}
 	
 			try {
-				try {
-					oos.writeObject(true);
-					oos.flush();
-				} catch (IOException e) {
-					e.printStackTrace();
-					return;
-				}
+				
+				oos.writeObject(true);				
 
 				Wine wine = wc.getWine(id);
 				
 				System.out.println("\tA enviar dados de wine");
+
+				List<Listing> lists =  wine.getListings();
+
+				oos.writeObject(lists.size());
+
+				for (Listing list : lists) {
+					oos.writeObject(list.getQuantity()); // quantity
+					oos.writeObject(list.getValue()); // value
+					oos.writeObject(list.getSeller()); // seller
+				}
 	
-				oos.writeObject(1); // quantity
-				oos.writeObject(2); // value
-				oos.writeObject("Eu"); // seller
-				
 				File image = new File(wine.getImgPath());
 				
 				String imgName = image.getName();
@@ -608,7 +609,7 @@ public class TintoImarketServer {
 	
 				oos.writeObject(image.length());
 	
-				Utilities.sendFile(oos, image);
+				Utilities.sendFile(os, image);
 				
 			} catch (IOException e) {
 				System.out.println("Failed to send wine Object from view: " + e.getMessage());
