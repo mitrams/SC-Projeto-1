@@ -6,38 +6,53 @@
  * Francisco Cardoso 57547
  ***************************************************************************/
 
+import java.io.File;
 import java.io.IOException;
+import java.io.InputStream;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
+import java.io.OutputStream;
+import java.net.ConnectException;
 import java.net.Socket;
 import java.util.Arrays;
 import java.util.Scanner;
 
 public class TintoImarketClient {
 
+	final static File userFolder = new File("Client_Files");
+	
+	static InputStream is = null;
+	static OutputStream os = null;
+
+	static ObjectInputStream inStream = null;
+	static ObjectOutputStream outStream = null;
+
 	public static void main(String[] args) throws IOException {
 		Socket socket = null;
-		ObjectInputStream inStream = null;
-		ObjectOutputStream outStream = null;
 		Scanner sc = null;
+
+		if (!userFolder.exists()) {
+			userFolder.mkdirs();
+		}
+
 		try {
 			try {
-			socket = new Socket("127.0.0.1", 12345);
+				socket = new Socket("127.0.0.1", 12345);
 			} catch (ConnectException e) {
 				System.out.println("Falha na conexão");
 				System.exit(-1);
 			}
-			
-			inStream = new ObjectInputStream(socket.getInputStream());
-			outStream = new ObjectOutputStream(socket.getOutputStream());
+
+			is = socket.getInputStream();
+			os = socket.getOutputStream();
+
+			outStream = new ObjectOutputStream(os);
+			inStream = new ObjectInputStream(is);
 			sc = new Scanner(System.in);
 
 			boolean ans = false;
-			// while (!ans) {
-			// }
 			ans = login(inStream, outStream, sc);
 			
-
 			if (!ans) {
 				System.out.println("Wrong username or password, please try again");
 				System.exit(-1);
@@ -66,6 +81,7 @@ public class TintoImarketClient {
 						break;
 					case ('v'):
 						System.out.println("goto view");
+						viewWine(inStream, outStream, cmd);
 						break;
 					case ('b'):
 						buyWine(inStream,outStream,cmd);
@@ -147,17 +163,33 @@ public class TintoImarketClient {
 				return;
 			}
 
-			outStream.writeObject('a');
+			
 			String wine = cmd[1];
-			String imgPath = cmd[2];
-		
+			String imgName = cmd[2];
+			
+			File image = new File(userFolder, imgName);
+			
+			if (!image.exists()) {
+				System.out.println("Ficheiro '" + imgName + "' não foi encontrado");
+				return;
+			}
+
+			char comm = 'a';
+			outStream.writeObject(comm);
+			
 			outStream.writeObject(wine);
-			outStream.writeObject(imgPath);
+			
 			int n = (int) inStream.readObject();
-			if (n == 0)
-				System.out.println("\n Vinho adicionado ao catálogo com sucesso.");
+			if (n == 0) {
+				outStream.writeObject(imgName);
+				System.out.println("A enviar ficheiro");
+				outStream.writeObject(image.length());
+				System.out.println("receber confirmação");
+				Utilities.sendFile(outStream, image);
+				System.out.println("\t Vinho adicionado ao catálogo com sucesso.");
+			}
 			if (n == 1)
-				System.out.println("\nErro: Este vinho já existia anteriormente no catálogo.");
+				System.out.println("\tErro: Este vinho já existia anteriormente no catálogo.");
 
 		} catch (IOException | ClassNotFoundException e){
 			System.err.println(e.getMessage());
@@ -166,6 +198,64 @@ public class TintoImarketClient {
 		
 	}
 
+	public static boolean viewWine(ObjectInputStream ois, ObjectOutputStream oos, String[] cmd) {
+		if (!cmd[0].equals("view") && !cmd[0].equals("v")) {
+			System.out.println("Comando desconhecido");
+			return false;
+		}
+
+		if (cmd.length != 2) {
+			System.out.println("Número de argumentos errado");
+			return false;
+		}
+
+		try {
+			oos.writeObject('v'); // sinalizar o tipo de comando
+			oos.writeObject(cmd[1]); // enviar o nome do vinho
+
+			boolean proceed = (boolean) ois.readObject();
+			if (!proceed) {
+				System.out.println("Vinho não encontrado");
+				return false;
+			}
+		} catch (IOException | ClassNotFoundException e) {
+			e.printStackTrace();
+			return false;
+		}
+
+		try {
+			// Wine wine = (Wine) ois.readObject();
+			int quantity = (int) ois.readObject();
+			int value = (int) ois.readObject();
+			
+			String seller = (String) ois.readObject();
+			
+			String imgName = (String) ois.readObject();
+
+			long imgLength = (long) ois.readObject();
+
+			Utilities.receiveFile(is, new File(userFolder, imgName), imgLength);
+			
+			String line = "\nNome: " + cmd[1] 
+			+ "\nQuantidade: " + (quantity != -1? quantity:"N/A") 
+			+ "\nValor: " + (value != -1? value:"N/A") 
+			+ "\nVendedor: " + (!seller.equals("")? seller:"N/A")
+			+ "\nNome do ficheiro: " + imgName;
+			
+			System.out.println(line);
+			return true;
+		} catch (IOException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+			return false;
+		} catch (ClassNotFoundException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+
+		return false;
+
+	}
 
 	private static void buyWine(ObjectInputStream inStream, ObjectOutputStream outStream, String[] cmd) {
 		try{
