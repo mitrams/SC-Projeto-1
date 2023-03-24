@@ -11,6 +11,7 @@ public class Utilities {
     public static void receiveFile(InputStream is, File file, long numBytes) throws IOException {
         FileOutputStream fos = new FileOutputStream(file);
         BufferedOutputStream bos = new BufferedOutputStream(fos);
+        
         byte[] buffer = new byte[1024];
         int count;
         int totalBytesRead = 0;
@@ -20,8 +21,13 @@ public class Utilities {
                 totalBytesRead += count;
             }
         } finally {
+            bos.flush();
+            fos.flush();
+
             bos.close();
+            fos.close();
         }
+
     }
     
 
@@ -31,11 +37,15 @@ public class Utilities {
         BufferedInputStream bis = new BufferedInputStream(fis);
         byte[] buffer = new byte[1024];
         int count;
+        long maxBytes = file.length();
+        long readBytes = 0;
+
         try {
             while ((count = bis.read(buffer)) > 0) {
                 os.write(buffer, 0, count);
             }
         } finally {
+            fis.close();
             bis.close();
         }
     }
