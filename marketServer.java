@@ -299,7 +299,6 @@ public class marketServer {
 
 				File newFile;
 				if (receivedFile.renameTo((newFile = new File(imagesFolder, wineId + '_' + fileName)))) {
-					System.out.println("renaming suceeded " + receivedFile.getAbsolutePath());
 					receivedFile = newFile;
 				}
 
