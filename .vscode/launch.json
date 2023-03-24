@@ -9,6 +9,20 @@
             "name": "TintoImarketClient",
             "request": "launch",
             "mainClass": "TintoImarketClient",
+            "projectName": "Projeto-1_17d3bf37"
+        },
+        {
+            "type": "java",
+            "name": "TintoImarketServer",
+            "request": "launch",
+            "mainClass": "TintoImarketServer",
+            "projectName": "Projeto-1_17d3bf37"
+        },
+        {
+            "type": "java",
+            "name": "TintoImarketClient",
+            "request": "launch",
+            "mainClass": "TintoImarketClient",
             "projectName": "SC-Projeto-1_16d1bfba"
         },
         {

@@ -20,6 +20,8 @@ import java.net.Socket;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Scanner;
 
 //Servidor myServer
@@ -177,22 +179,24 @@ public class TintoImarketServer {
 		}
 
 		private void runCommands(User u) {
-
-			Boolean b = false;
-			while (!b) {
+			while (true) {
 				try {
+					System.out.println("Waiting for commands...");
 					char command = (char) ois.readObject();
+
 					switch (command) {
 						case 'e':
-							System.out.println(u.getName() + "saiu");
-							break;
+							System.out.println(u.getName() + " saiu");
+							return;
 						case 'a':
+							System.out.println("ADD");
 							addWine(ois, oos);
 							break;
 						case 's':
 							sellWine(ois, oos, u);
 							break;
 						case 'v':
+							viewWine(ois, oos, u);
 							break;
 						case 'b':
 							buyWine(ois, oos, u);
@@ -212,7 +216,7 @@ public class TintoImarketServer {
 					}
 				} catch (IOException | ClassNotFoundException e) {
 					System.err.println(e.getMessage());
-					System.exit(-1);
+					return;
 				}
 			}
 		}
@@ -256,17 +260,29 @@ public class TintoImarketServer {
 				String name = (String) inStream.readObject();
 				
 				if (!wc.validateWine(name)) {
-					String imgPath = (String) inStream.readObject();
-					System.out.println("recebi instrução add " + name + " " + imgPath);
+					outStream.writeObject(0);
+
+					String imgName = (String) inStream.readObject();
+					System.out.println("recebi instrução add " + name + " " + imgName);
 					
-					
-					wc.addWine(name, imagesFolder + "/" + imgPath);
-					wc.writeFile();
+					File image = null;
 					try {
-						outStream.writeObject(0);
+						long fileSize = (long) inStream.readObject();
+						image = new File(imagesFolder, name + '_' + imgName);
+						Utilities.receiveFile(inStream, image, fileSize);
+
+
 					} catch (IOException e) {
 						e.printStackTrace();
+
+						if (image != null) {
+							image.delete();
+						}
 					}
+
+					wc.addWine(name, imagesFolder + "/" + imgName);
+					wc.writeFile();
+					
 				} else {
 					try {
 						outStream.writeObject(1);
@@ -541,6 +557,66 @@ public class TintoImarketServer {
 
 		}
 
+		private synchronized void viewWine(ObjectInputStream ois, ObjectOutputStream oos, User u) {
+			System.out.println("Got to view");
+
+			String id = null;
+			try {
+				id = (String) ois.readObject();
+			} catch (IOException | ClassNotFoundException e) {
+				System.out.println("Failed to receive wineID from view: " + e.getMessage());
+				return;
+			}
+
+			if (!wc.validateWine(id)) {
+				// Wine not found
+				try {
+					oos.writeObject(false);
+					oos.flush();
+					System.out.println("Vinho " + id + " não encontrado");
+				} catch (IOException e) {
+					e.printStackTrace();
+					return;
+				}
+				return;
+			}
+	
+			try {
+				
+				oos.writeObject(true);				
+
+				Wine wine = wc.getWine(id);
+				
+				System.out.println("\tA enviar dados de wine");
+
+				List<Listing> lists =  wine.getListings();
+
+				oos.writeObject(lists.size());
+
+				for (Listing list : lists) {
+					oos.writeObject(list.getQuantity()); // quantity
+					oos.writeObject(list.getValue()); // value
+					oos.writeObject(list.getSeller()); // seller
+				}
+	
+				File image = new File(wine.getImgPath());
+				
+				String imgName = image.getName();
+				int separatorIndex = imgName.indexOf("_");
+				imgName = imgName.substring(separatorIndex + 1);
+	
+				oos.writeObject(imgName);
+	
+				oos.writeObject(image.length());
+	
+				Utilities.sendFile(os, image);
+				
+			} catch (IOException e) {
+				System.out.println("Failed to send wine Object from view: " + e.getMessage());
+				return;
+			}
+		}
 	}
+
 
 }
