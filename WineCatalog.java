@@ -26,11 +26,22 @@ public class WineCatalog  implements Serializable{
         readFile();
     }
 
+    /**
+     * Adds a new {@code Wine} to the catalog
+     * @param wine name of the wine
+     * @param img path to the image of the wine
+     * 
+     */
     public void addWine(String wine, String img){
         Wine w = new Wine(wine, img);
         this.wines.put(wine, w);
     }
 
+
+    /**
+     * @param name
+     * @return Whether or not 'name' is the name of an existing Wine
+     */
     public boolean validateWine(String name) {
         return wines.containsKey(name);  
     }
