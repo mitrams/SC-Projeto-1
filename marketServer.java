@@ -5,13 +5,8 @@
  *
  ***************************************************************************/
 
-import java.io.BufferedInputStream;
-import java.io.BufferedOutputStream;
 import java.io.File;
-import java.io.FileInputStream;
 import java.io.FileNotFoundException;
-import java.io.FileOutputStream;
-import java.io.FileReader;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.io.InputStream;
@@ -132,15 +127,15 @@ public class marketServer {
 				is = socket.getInputStream();
 				os = socket.getOutputStream();
 
-				ois = new ObjectInputStream(is);
 				oos = new ObjectOutputStream(os);
+				ois = new ObjectInputStream(is);
 
 				String user = null;
 				String passwd = null;
 
 				try {
-					user = (String) in.readObject();
-					passwd = (String) in.readObject();
+					user = (String) ois.readObject();
+					passwd = (String) ois.readObject();
 				} catch (ClassNotFoundException e1) {
 					e1.printStackTrace();
 				}
@@ -155,44 +150,56 @@ public class marketServer {
 				} catch (Exception e) {
 					// TODO: handle exception
 				}
-
+				
 				System.out.println("Received: (user: " + user + ", pass: " + passwd + ")");
-
+				
 				// Ir buscar a palavra-passe
 				String dbPass = login_db.get(user);
-
+				
 				boolean newUser = false;
-
+				
 				if (dbPass == null) {
 					login_db.put(user, passwd);
 					newUser = true;
 				} else if (!dbPass.equals(passwd)) {
 					System.out.println("Wrong password: " + dbPass);
-					out.writeObject(false);
+					oos.writeObject(false);
 					return;
 				}
-
+				
 				// Confirmar o login
-				out.writeObject(true);
+				oos.writeObject(true);
+				
+				boolean exit = false;
+				while (!exit) {
+					System.out.println("Waiting for command");
+					String input = receiveString(ois);
 
-				String input = receiveString(in);
+					if (input == null) {
+						return;
+					}
 
-				if (input == null) {
-					return;
-				}
+					System.out.println("Received '" + input + "' command");
 
-				switch (input) {
-					case "a":
-					case "add":
-						addComm();
-						break;
-
-					case "view":
-						viewComm();
-						break;
-
-					default:
-						break;
+					switch (input) {
+						case "a":
+						case "add":
+							System.out.println("goto add");
+							addComm();
+							break;
+	
+						case "view":
+							viewComm();
+							break;
+						
+						case "exit":
+							exit = true;
+							System.out.println("Client is out");
+							break;
+						
+						default:
+							break;
+					}
 				}
 
 				/* System.out.println("Recebido nome do ficheiro: " + input);
@@ -234,8 +241,11 @@ public class marketServer {
 
 				fin.close();
 				output.close(); */
-				out.close();
-				in.close();
+				oos.close();
+				ois.close();
+
+				os.close();
+				is.close();
 
 				socket.close();
 
@@ -264,14 +274,39 @@ public class marketServer {
 		private synchronized void addComm() {
 			// Get wine id and image
 			String wineId = null;
-			File receivedFile = null;
+			File receivedFile = new File(imagesFolder, "image.tmp");
+			String fileName = null;
 
 			try {
-				wineId = in.readUTF();
-				receivedFile = (File) in.readObject();
+				receivedFile.createNewFile();
+			} catch (IOException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+				return;
+			}
+
+			try {
+				System.out.println("Vou ler o wine");
+				wineId = (String) ois.readObject();
+				
+				System.out.println(wineId);
+				fileName = (String) ois.readObject();
+				System.out.println(fileName);
+
+				long fileSize = (long) ois.readObject();
+				
+				Utilities.receiveFile(is, receivedFile, fileSize);
+
+				File newFile;
+				if (receivedFile.renameTo((newFile = new File(imagesFolder, wineId + '_' + fileName)))) {
+					System.out.println("renaming suceeded " + receivedFile.getAbsolutePath());
+					receivedFile = newFile;
+				}
+
 			} catch (Exception e) {
 				try {
-					out.writeBoolean(false);
+					oos.writeBoolean(false);
+					oos.flush();
 				} catch (IOException e1) {
 					e1.printStackTrace();
 				}
@@ -279,42 +314,21 @@ public class marketServer {
 				return;
 			}
 
-			if (wineId == null && receivedFile == null) {
+			if (wineId == null ) {
 				try {
-					out.writeBoolean(false);
+					oos.writeBoolean(false);
+					oos.flush();
 				} catch (IOException e1) {
 					e1.printStackTrace();
 				}
 				return;
 			}
 
-			File image = new File(imagesFolder, receivedFile.getName());
-
-			try (
-					InputStream fin = new BufferedInputStream(
-							new FileInputStream(receivedFile));
-					OutputStream fout = new BufferedOutputStream(
-							new FileOutputStream(image))) {
-
-				byte[] buffer = new byte[1024];
-				int lengthRead;
-				while ((lengthRead = fin.read(buffer)) > 0) {
-					fout.write(buffer, 0, lengthRead);
-					fout.flush();
-				}
-			} catch (Exception e) {
-				System.out.println("Error copying image contents: " + e.getMessage());
+			System.out.println(receivedFile.getName());
+			if (!wines.put(wineId, -1, -1, null, receivedFile)) {
 				try {
-					out.writeBoolean(false);
-				} catch (IOException e1) {
-					e1.printStackTrace();
-				}
-				return;
-			}
-
-			if (!wines.put(wineId, -1, -1, null, image)) {
-				try {
-					out.writeBoolean(false);
+					oos.writeBoolean(false);
+					oos.flush();
 				} catch (IOException e1) {
 					e1.printStackTrace();
 				}
@@ -322,11 +336,11 @@ public class marketServer {
 			}
 
 			try {
-				out.writeBoolean(true);
+				oos.writeBoolean(true);
+				oos.flush();
 			} catch (IOException e1) {
 				e1.printStackTrace();
 			}
-
 		}
 
 		private synchronized void sellComm() {
@@ -336,14 +350,9 @@ public class marketServer {
 		private synchronized void viewComm() {
 			String id = null;
 			try {
-				id = in.readUTF();
-			} catch (IOException e) {
+				id = (String) ois.readObject();
+			} catch (IOException | ClassNotFoundException e) {
 				System.out.println("Failed to receive wineID from view: " + e.getMessage());
-				return;
-			}
-
-			if (id == null) {
-				// Empty id
 				return;
 			}
 
@@ -351,12 +360,46 @@ public class marketServer {
 
 			if (wine == null) {
 				// Wine not found
+				try {
+					oos.writeBoolean(false);
+					oos.flush();
+					System.out.println("Vinho " + id + " não encontrado");
+				} catch (IOException e) {
+					e.printStackTrace();
+					return;
+				}
 				return;
 			}
 
 			try {
-				System.out.println(wine);
-				out.writeObject(wine);
+				try {
+					oos.writeBoolean(true);
+					oos.flush();
+				} catch (IOException e) {
+					e.printStackTrace();
+					return;
+				}
+				
+				System.out.println("\tA enviar dados de wine");
+
+				oos.writeObject(wine.quantity);
+				oos.writeObject(wine.value);
+				oos.writeObject(wine.seller);
+				
+				File image = new File(wine.imgPath);
+				
+				String imgName = image.getName();
+				int separatorIndex = imgName.indexOf("_");
+				imgName = imgName.substring(separatorIndex + 1);
+
+				oos.writeObject(imgName);
+
+				oos.writeObject(image.length());
+
+				Utilities.sendFile(oos, image);
+				
+
+
 			} catch (IOException e) {
 				System.out.println("Failed to send wine Object from view: " + e.getMessage());
 				return;

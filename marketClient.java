@@ -1,30 +1,47 @@
 import java.io.File;
 import java.io.IOException;
+import java.io.InputStream;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
+import java.io.OutputStream;
 import java.net.Socket;
 import java.net.UnknownHostException;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.Scanner;
 
 public class marketClient {
 
-	static ObjectInputStream inStream;
-	static ObjectOutputStream outStream;
+	static InputStream is;
+	static OutputStream os;
+
+	static ObjectInputStream ois;
+	static ObjectOutputStream oos;
 
 	static Scanner sc;
+
+	final static String imageFolder = "Client_Files";
 
 	public static void main(String[] args) throws IOException {
 
 		try {
 			Socket socket = new Socket("127.0.0.1", 12345);
 
-			inStream = new ObjectInputStream(socket.getInputStream());
-			outStream = new ObjectOutputStream(socket.getOutputStream());
+			System.out.println("Inicializar I/O");
+
+			os = socket.getOutputStream();
+			is = socket.getInputStream();
+			
+			oos = new ObjectOutputStream(os);
+			ois = new ObjectInputStream(is);
+			
+			System.out.println("I/O Pronto");
+			
 
 			boolean ans = false;
-			// while (!ans) {
-			// }
-			ans = login(inStream, outStream);
+
+			System.out.println("A iniciar Login");
+			ans = login(ois, oos);
 
 			if (!ans) {
 				System.out.println("Wrong username or password, please try again");
@@ -44,6 +61,7 @@ public class marketClient {
 				switch (cmd[0]) {
 					case ("e"):
 					case ("exit"):
+						oos.writeObject("exit");
 						exit = true;
 						break;
 					case ("a"):
@@ -51,6 +69,8 @@ public class marketClient {
 						System.out.println("goto add");
 						if (!add(cmd)) {
 							System.out.println("Failed to add new wine");
+						} else {
+							System.out.println("Wine added successfully");
 						}
 						break;
 					case ("s"):
@@ -86,9 +106,13 @@ public class marketClient {
 						System.out.println("--> \'" + cmd[0] + "\' - Comando desconhecido");
 				}
 			}
-			inStream.close();
-			outStream.close();
+			ois.close();
+			oos.close();
 			sc.close();
+
+			os.close();
+			is.close();
+
 			socket.close();
 
 		} catch (UnknownHostException e) {
@@ -171,17 +195,21 @@ public class marketClient {
 		}
 
 		try {
-			outStream.writeObject("add"); // sinalizar o tipo de comando
+			oos.writeObject("add"); // sinalizar o tipo de comando
 
-			outStream.writeUTF(wineId); // enviar o id do vinho
-			outStream.writeObject(image); // enviar a imagem do vinho
+			oos.writeObject(wineId); // enviar o id do vinho
+			oos.writeObject(image.getName());
+			oos.writeObject(image.length());
+			Utilities.sendFile(os, image);  // enviar a imagem do vinho
 
-			/*
-			 * if (!inStream.readBoolean()) {
-			 * // Wine not added
-			 * return false;
-			 * }
-			 */
+			// outStream.writeObject(image);
+
+			System.out.println("waiting confirmation");
+			if (!ois.readBoolean()) {
+				// Wine not added
+				return false;
+			}
+			
 
 		} catch (IOException e) {
 			e.printStackTrace();
@@ -203,29 +231,48 @@ public class marketClient {
 		}
 
 		try {
-			outStream.writeObject("view"); // sinalizar o tipo de comando
-			outStream.writeUTF(cmd[1]); // enviar o id do vinho
-			System.out.println("\tEnviado id: " + cmd[1]);
-		} catch (IOException e) {
-			e.printStackTrace();
-		}
-
-		try {
-			Wine wine = (Wine) inStream.readObject();
-			if (wine instanceof Wine) {	
-				System.out.println(wine);
-
-				return true;
-			} else {
+			oos.writeObject("view"); // sinalizar o tipo de comando
+			oos.writeObject(cmd[1]); // enviar o id do vinho
+			if (!ois.readBoolean()) {
+				System.out.println("Vinho não encontrado");
 				return false;
 			}
-		} catch (ClassNotFoundException | IOException e) {
+		} catch (IOException e) {
+			e.printStackTrace();
+			return false;
+		}		
+
+		try {
+			// Wine wine = (Wine) ois.readObject();
+			int quantity = (int) ois.readObject();
+			int value = (int) ois.readObject();
+			
+			String seller = (String) ois.readObject();
+			
+			String imgName = (String) ois.readObject();
+
+			long imgLength = (long) ois.readObject();
+
+			Utilities.receiveFile(is, new File(imageFolder, imgName), imgLength);
+			
+			String line = "\nNome: " + cmd[1] 
+			+ "\nQuantidade: " + (quantity != -1? quantity:"N/A") 
+			+ "\nValor: " + (value != -1? value:"N/A") 
+			+ "\nVendedor: " + (!seller.equals("")? seller:"N/A")
+			+ "\nNome do ficheiro: " + imgName;
+			
+			System.out.println(line);
+			return true;
+		} catch (IOException e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
 			return false;
+		} catch (ClassNotFoundException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
 		}
 
-		
+		return false;
 
 	}
 
