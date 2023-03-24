@@ -42,8 +42,6 @@ public class Utilities {
         BufferedInputStream bis = new BufferedInputStream(fis);
         byte[] buffer = new byte[1024];
         int count;
-        long maxBytes = file.length();
-        long readBytes = 0;
 
         try {
             while ((count = bis.read(buffer)) > 0) {
