@@ -14,6 +14,7 @@ import java.io.ObjectOutputStream;
 import java.io.OutputStream;
 import java.net.ConnectException;
 import java.net.Socket;
+import java.net.UnknownHostException;
 import java.util.Arrays;
 import java.util.Scanner;
 
@@ -35,13 +36,60 @@ public class TintoImarket {
 			userFolder.mkdirs();
 		}
 
-		try {
-			try {
-				socket = new Socket("127.0.0.1", 12345);
-			} catch (ConnectException e) {
-				System.out.println("Falha na conexão");
+		System.out.println(args.length);
+
+		String user = null;
+		String password = null;
+
+		switch (args.length) {
+			case 0:
+				System.out.println("Falta de Argumentos: Não introduziu o IP do servidor e o seu utilizador");
 				System.exit(-1);
+			case 1:
+				System.out.println("Falta de Argumentos: Não introduziu o seu utilizador");
+				System.exit(-1);
+			case 2:
+				user = args[1];
+				break;
+			case 3:
+				user = args[1];
+				password = args[2];
+				break;
+			default:
+				break;
+		}
+		
+		String[] hostPortPair = args[0].split(":");
+
+		int port = -1;
+		
+		if (hostPortPair.length >= 2) {
+			if (!hostPortPair[1].equals("")) {
+				try {
+					port = Integer.parseInt(hostPortPair[1]);
+				} catch (NumberFormatException e) {
+					System.out.println("Número de porta com o formato errado, a utilizar a porta 12345");
+					port = 12345;
+				}
 			}
+		} else {
+			port = 12345;
+		}
+
+		try {
+			socket = new Socket(hostPortPair[0], port);
+		} catch (UnknownHostException e) {
+			System.out.println("Host '" + hostPortPair[0] + "' desconhecido");
+			System.exit(-1);
+		} catch (IllegalArgumentException e) {
+			System.out.println("Porta '" + port + "' está fora dos limites");
+			System.exit(-1);
+		} catch (Exception e) {
+			System.out.println("Falha na conexão");
+			System.exit(-1);
+		}
+
+		try {
 
 			is = socket.getInputStream();
 			os = socket.getOutputStream();
@@ -51,15 +99,18 @@ public class TintoImarket {
 			sc = new Scanner(System.in);
 
 			boolean ans = false;
-			ans = login(inStream, outStream, sc);
+
+
+
+			ans = login(user, password, sc);
 			
 			if (!ans) {
-				System.out.println("Wrong username or password, please try again");
+				System.out.println("Utilizador ou palavra-passe incorretos");
 				System.exit(-1);
 			}
 
 			System.out.println("Welcome!");
-			//help();
+			help();
 
 			//sc = new Scanner(System.in);
 			boolean exit = false;
@@ -387,8 +438,8 @@ public class TintoImarket {
 	}
 
 	private static void help() {
-		//System.out.println("----------------------------------------\n");
-        System.out.println("\n(h)elp:\t\tInformacao sobre todos os comandos disponiveis");
+		System.out.println("----------------------------------------\n");
+        System.out.println("(h)elp:\t\tInformacao sobre todos os comandos disponiveis");
         System.out.println("(a)dd:\t\tAdicionar um vinho");
         System.out.println("(s)ell:\t\tColocar um vinho a venda");
         System.out.println("(v)iew:\t\tObter informacoes sobre um vinho");
@@ -397,27 +448,31 @@ public class TintoImarket {
         System.out.println("(c)lassify:\tAtribuir uma classificacao de 1 a 5 a um vinho");
         System.out.println("(t)alk:\t\tEnviar uma mensagem a outro utilizador");
         System.out.println("(r)ead:\t\tLer as novas mensagens recebidas");
-        System.out.println("(e)xit:\t\tSair do programa\n");
+        System.out.println("(e)xit:\t\tSair do programa");
+		System.out.println("\n----------------------------------------\n");
 	}
 
-	public static boolean login(ObjectInputStream in, ObjectOutputStream out, Scanner sc) {
+	public static boolean login(String user, String password, Scanner sc) {
 		
-		System.out.print("username: ");
-		String user = sc.nextLine();
+		if (user == null) {
+			System.out.print("username: ");
+			user = sc.nextLine();
+		}
 
-		System.out.print("password: ");
-		String pass = sc.nextLine();
-
+		if (password == null) {
+			System.out.print("password: ");
+			password = sc.nextLine();
+		}
 
 		try {
-			out.writeObject(user);
-			out.writeObject(pass);
+			outStream.writeObject(user);
+			outStream.writeObject(password);
 		} catch (IOException e) {
 			e.printStackTrace();
 		}
 
 		try {
-			return (boolean) in.readObject();
+			return (boolean) inStream.readObject();
 			
 		} catch (ClassNotFoundException e) {
 			e.printStackTrace();
