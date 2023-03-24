@@ -21,7 +21,13 @@ public class TintoImarketClient {
 		ObjectOutputStream outStream = null;
 		Scanner sc = null;
 		try {
+			try {
 			socket = new Socket("127.0.0.1", 12345);
+			} catch (ConnectException e) {
+				System.out.println("Falha na conexão");
+				System.exit(-1);
+			}
+			
 			inStream = new ObjectInputStream(socket.getInputStream());
 			outStream = new ObjectOutputStream(socket.getOutputStream());
 			sc = new Scanner(System.in);
