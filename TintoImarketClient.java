@@ -72,6 +72,7 @@ public class TintoImarketClient {
 				switch(cmd[0].charAt(0)) {
 					case ('e'):
 						exit = true;
+						outStream.writeObject('e');
 						break;
 					case ('a'):
 						addWine(inStream,outStream,cmd);
@@ -80,7 +81,6 @@ public class TintoImarketClient {
 						sellWine(inStream,outStream,cmd);
 						break;
 					case ('v'):
-						System.out.println("goto view");
 						viewWine(inStream, outStream, cmd);
 						break;
 					case ('b'):
@@ -213,8 +213,7 @@ public class TintoImarketClient {
 			oos.writeObject('v'); // sinalizar o tipo de comando
 			oos.writeObject(cmd[1]); // enviar o nome do vinho
 
-			boolean proceed = (boolean) ois.readObject();
-			if (!proceed) {
+			if (!(boolean) ois.readObject()) {
 				System.out.println("Vinho não encontrado");
 				return false;
 			}
@@ -225,35 +224,41 @@ public class TintoImarketClient {
 
 		try {
 			// Wine wine = (Wine) ois.readObject();
-			int quantity = (int) ois.readObject();
-			int value = (int) ois.readObject();
-			
-			String seller = (String) ois.readObject();
-			
+
+			int numberOfListings = (int) ois.readObject();
+
+			System.out.println("Listings num == " + numberOfListings);
+
+			for (int i = 0; i < numberOfListings; i++) {
+				int quantity = (int) ois.readObject();
+				float value = (float) ois.readObject();
+				
+				String seller = (String) ois.readObject();
+				
+				String line = "\nNome: " + cmd[1] 
+				+ "\nQuantidade: " + (quantity != -1? quantity:"N/A") 
+				+ "\nValor: " + (value != -1? value + "€":"N/A") 
+				+ "\nVendedor: " + (!seller.equals("")? seller:"N/A");
+				
+				System.out.println(line);
+			}
+
+			System.out.println("");
+
 			String imgName = (String) ois.readObject();
 
 			long imgLength = (long) ois.readObject();
 
 			Utilities.receiveFile(is, new File(userFolder, imgName), imgLength);
-			
-			String line = "\nNome: " + cmd[1] 
-			+ "\nQuantidade: " + (quantity != -1? quantity:"N/A") 
-			+ "\nValor: " + (value != -1? value:"N/A") 
-			+ "\nVendedor: " + (!seller.equals("")? seller:"N/A")
-			+ "\nNome do ficheiro: " + imgName;
-			
-			System.out.println(line);
+
+			System.out.println("Nome da imagem: " + imgName);
+
 			return true;
-		} catch (IOException e) {
+		} catch (IOException | ClassNotFoundException e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
 			return false;
-		} catch (ClassNotFoundException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
 		}
-
-		return false;
 
 	}
 
