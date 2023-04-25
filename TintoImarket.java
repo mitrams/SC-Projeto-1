@@ -7,16 +7,27 @@
  ***************************************************************************/
 
 import java.io.File;
+import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
 import java.io.OutputStream;
-import java.net.ConnectException;
-import java.net.Socket;
 import java.net.UnknownHostException;
+import java.security.InvalidKeyException;
+import java.security.KeyStore;
+import java.security.NoSuchAlgorithmException;
+import java.security.PrivateKey;
+import java.security.Signature;
+import java.security.SignatureException;
+import java.security.SignedObject;
+import java.security.cert.Certificate;
 import java.util.Arrays;
 import java.util.Scanner;
+
+import javax.net.SocketFactory;
+import javax.net.ssl.SSLSocket;
+import javax.net.ssl.SSLSocketFactory;
 
 public class TintoImarket {
 
@@ -28,35 +39,25 @@ public class TintoImarket {
 	static ObjectInputStream inStream = null;
 	static ObjectOutputStream outStream = null;
 
-	public static void main(String[] args) throws IOException {
-		Socket socket = null;
+	private static String truststore;
+	private static String keystore;
+	private static String keystorepw;
+
+	public static void main(String[] args) throws IOException, NoSuchAlgorithmException, ClassNotFoundException {
+		SSLSocket socket = null;
 		Scanner sc = null;
 
 		if (!userFolder.exists()) {
 			userFolder.mkdirs();
 		}
 
-		System.out.println(args.length);
+//		System.out.println(args.length);
 
 		String user = null;
-		String password = null;
 
-		switch (args.length) {
-			case 0:
-				System.out.println("Falta de Argumentos: Não introduziu o IP do servidor e o seu utilizador");
-				System.exit(-1);
-			case 1:
-				System.out.println("Falta de Argumentos: Não introduziu o seu utilizador");
-				System.exit(-1);
-			case 2:
-				user = args[1];
-				break;
-			case 3:
-				user = args[1];
-				password = args[2];
-				break;
-			default:
-				break;
+		if(args.length != 5){
+			System.out.println("Formato incorreto: Utilizar TintolMarket <serverAdress> <truststore> <keystore> <password-keystore> <userID>");
+			System.exit(-1);
 		}
 		
 		String[] hostPortPair = args[0].split(":");
@@ -75,9 +76,35 @@ public class TintoImarket {
 		} else {
 			port = 12345;
 		}
+		truststore = args[1];
+		keystore = args[2];
+		keystorepw = args[3];
+		user = args[4];
+		PrivateKey pk=null;
+		Certificate cer=null;
+
+//		System.out.println("Before try:" + args[1]+" "+args[2]+" "+args[3]+" "+args[4]);
 
 		try {
-			socket = new Socket(hostPortPair[0], port);
+			FileInputStream ksFile = new FileInputStream(keystore);
+			KeyStore kStore = KeyStore.getInstance("PKCS12");
+//			System.out.println("Before load");
+			kStore.load(ksFile, keystorepw.toCharArray());
+//			System.out.println("After load " + keystorepw);
+			pk = (PrivateKey) kStore.getKey(user, keystorepw.toCharArray());
+			if(pk==null) {
+				System.out.println("utilizador "+user+" não encontrado na keystore");
+				System.exit(-1);
+			}
+			cer = (Certificate) kStore.getCertificate(user);
+			System.setProperty("javax.net.ssl.trustStore", truststore);
+			System.setProperty("javax.net.ssl.trustStorePassword",keystorepw);
+			System.out.println("truststore:" + truststore);
+			SocketFactory sf = SSLSocketFactory.getDefault();
+		
+			System.out.println("address: "+hostPortPair[0]+":"+port);
+			socket = (SSLSocket) sf.createSocket(hostPortPair[0], port);
+			System.out.println("2");
 		} catch (UnknownHostException e) {
 			System.out.println("Host '" + hostPortPair[0] + "' desconhecido");
 			System.exit(-1);
@@ -86,6 +113,7 @@ public class TintoImarket {
 			System.exit(-1);
 		} catch (Exception e) {
 			System.out.println("Falha na conexão");
+			e.printStackTrace();
 			System.exit(-1);
 		}
 
@@ -101,8 +129,9 @@ public class TintoImarket {
 			boolean ans = false;
 
 
+//			System.out.println("Before login");
 
-			ans = login(user, password, sc);
+			ans = login(user, pk, cer);
 			
 			if (!ans) {
 				System.out.println("Utilizador ou palavra-passe incorretos");
@@ -306,7 +335,6 @@ public class TintoImarket {
 
 			return true;
 		} catch (IOException | ClassNotFoundException e) {
-			// TODO Auto-generated catch block
 			e.printStackTrace();
 			return false;
 		}
@@ -452,35 +480,57 @@ public class TintoImarket {
 		System.out.println("\n----------------------------------------\n");
 	}
 
-	public static boolean login(String user, String password, Scanner sc) {
-		
-		if (user == null) {
-			System.out.print("username: ");
-			user = sc.nextLine();
-		}
-
-		if (password == null) {
-			System.out.print("password: ");
-			password = sc.nextLine();
-		}
+	public static boolean login(String user, PrivateKey pk, Certificate cer) throws NoSuchAlgorithmException, IOException, ClassNotFoundException {
+		long nonce=0;
+		char flag=' ';
 
 		try {
 			outStream.writeObject(user);
-			outStream.writeObject(password);
 		} catch (IOException e) {
 			e.printStackTrace();
 		}
 
 		try {
-			return (boolean) inStream.readObject();
-			
+			nonce=(long)inStream.readObject();
+			flag=(char)inStream.readObject();
 		} catch (ClassNotFoundException e) {
 			e.printStackTrace();
 		} catch (IOException e) {
 			e.printStackTrace();
 		}
-		
-		return false;
+
+		SignedObject signedNonce=null;
+		try {
+			Signature signature = Signature.getInstance("MD5withRSA");
+			signedNonce = new SignedObject(nonce, pk, signature);
+		} catch (InvalidKeyException | SignatureException e) {
+			System.out.println("\nErro a gerar assinatura para nonce\n");
+			return false;
+		}
+
+		if(flag=='c') {
+			try {
+				outStream.writeObject(signedNonce);
+				return (boolean)inStream.readObject();
+			} catch (IOException e) {
+				e.printStackTrace();
+			}
+			return false;
+		}
+		if(flag=='d') {
+			try {
+				outStream.writeObject(nonce);
+				outStream.writeObject(signedNonce);
+				outStream.writeObject(cer);
+				return (boolean)inStream.readObject();
+			}
+			catch (IOException e) {
+				e.printStackTrace();
+			}
+			return false;
+		}
+		System.out.println("\nRecebida flag desconhecida\n");
+		return false;	
 	}
 
 }

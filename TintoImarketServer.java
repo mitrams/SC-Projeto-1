@@ -12,17 +12,27 @@ import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.FileWriter;
 import java.io.IOException;
-import java.io.InputStream;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
-import java.io.OutputStream;
-import java.net.ServerSocket;
 import java.net.Socket;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.security.InvalidKeyException;
+import java.security.NoSuchAlgorithmException;
+import java.security.PublicKey;
+import java.security.Signature;
+import java.security.SignatureException;
+import java.security.SignedObject;
+import java.security.cert.Certificate;
 import java.util.List;
+import java.util.Random;
 import java.util.Scanner;
+
+
+import javax.net.ServerSocketFactory;
+import javax.net.ssl.SSLServerSocket;
+import javax.net.ssl.SSLServerSocketFactory;
 
 //Servidor myServer
 
@@ -30,11 +40,17 @@ public class TintoImarketServer {
 	private UserCatalog uc = UserCatalog.getCatalog();
 	private WineCatalog wc = WineCatalog.getCatalog();
 	private Wallets wallets = Wallets.getCatalog();
+
 	public static final String MSG_FILE = "Msg.txt";
 
 	final static File serverFolder = new File("Server_Files");
 	final static File imagesFolder = new File(serverFolder, "Images");
 	final static File userLog = new File(serverFolder, "loginInfo");
+	final static File pksFolder = new File(serverFolder, "Pks");
+
+	private String chipherpw;
+	private String keystore;
+	private String keystorepw;
 
 	public static void main(String[] args) {
 		if (!serverFolder.exists()) {
@@ -47,6 +63,13 @@ public class TintoImarketServer {
 		if (!imagesFolder.exists()) {
 			if (!imagesFolder.mkdirs()) {
 				System.out.println("Failed to create images folder");
+				System.exit(-1);
+			}
+		}
+
+		if (!pksFolder.exists()) {
+			if (!pksFolder.mkdirs()) {
+				System.out.println("Failed to create certificates folder");
 				System.exit(-1);
 			}
 		}
@@ -65,11 +88,11 @@ public class TintoImarketServer {
 	}
 
 	public void startServer(String[] args) {
-		ServerSocket sSoc = null;
+		SSLServerSocket sSoc = null;
 
 		int port = 12345;
 
-		if (args.length != 0) {
+		if (args.length == 4) {
 			try {
 				port = Integer.parseInt(args[0]);
 
@@ -82,15 +105,24 @@ public class TintoImarketServer {
 			} catch (IllegalArgumentException e) {
 				System.out.println("Porta fora dos valores válidos, a utilizar a porta '12345'");
 			}
+			this.chipherpw = args[1];
+			this.keystore = args[2];
+			this.keystorepw = args[3];
+		}else{
+			System.out.println("Formato incorreto: Utilizar TintolmarketServer <port> <password-cifra> <keystore> <password-keystore>");
+			System.exit(-1);
 		}
 
 		try {
-			sSoc = new ServerSocket(port);
+			System.setProperty("javax.net.ssl.keyStore", keystore);
+			System.setProperty("javax.net.ssl.keyStorePassword", keystorepw);
+			ServerSocketFactory ssf = SSLServerSocketFactory.getDefault( );
+			sSoc = (SSLServerSocket) ssf.createServerSocket(port);
+			
 		} catch (IOException e) {
 			System.err.println(e.getMessage());
 			System.exit(-1);
 		}
-
 		System.out.println("Server a correr.");
 
 		boolean running = true;
@@ -118,12 +150,6 @@ public class TintoImarketServer {
 
 		private Socket socket = null;
 
-		InputStream is = null;
-		OutputStream os = null;
-
-		ObjectOutputStream oos = null;
-		ObjectInputStream ois = null;
-
 		File userLog;
 
 		ServerThread(Socket inSoc, File userLog) throws FileNotFoundException, IOException {
@@ -136,60 +162,89 @@ public class TintoImarketServer {
 		@Override
 		public void run() {
 			try {
-				is = socket.getInputStream();
-				os = socket.getOutputStream();
-
-				oos = new ObjectOutputStream(os);
-				ois = new ObjectInputStream(is);
-
+				ObjectOutputStream out = new ObjectOutputStream(socket.getOutputStream());
+				ObjectInputStream in = new ObjectInputStream(socket.getInputStream());
+				
+				Random rd = new Random();
+				long nonce = 10000000 + rd.nextInt(90000000);
+				
 				String user = null;
-				String passwd = null;
-
-				User u;
-
-				user = (String) ois.readObject();
-				passwd = (String) ois.readObject();
-				System.out.println("thread: depois de receber a password e o user");
-
-				System.out.println("Recebi: (utilizador: " + user + ", password: " + passwd + ")");
-
-				if (uc.containsUser(user)) {
-					if (uc.validateUser(user, passwd)) {
-						u = uc.getUser(user);
-						oos.writeObject(true);
-					} else {
-						System.out.println("erro: Password errada");
-						oos.writeObject(false);
-						return;
+				user = (String) in.readObject();
+			//	String username =  u.getName();
+				if (!uc.containsUser(user)) {
+					out.writeObject(nonce);
+					char flag = 'd';
+					out.writeObject(flag);
+					long receivednonce = (long)in.readObject();
+					if (receivednonce!=nonce) {
+						System.out.println("Recebido nonce diferente");
+						out.writeObject(false);
 					}
-				} else {
-					uc.registerUser(user, passwd);
-					wallets.setBalance(user, 200);
-					System.out.println("Utilizador criado");
-					u = uc.getUser(user);
-					oos.writeObject(true);
+					else {
+						SignedObject signedObject = (SignedObject)in.readObject();
+						Certificate cer = (Certificate)in.readObject();
+						PublicKey publicKey = cer.getPublicKey( );
+						Signature sig = Signature.getInstance("MD5withRSA");
+						if(!signedObject.verify(publicKey, sig)) {
+							System.out.println("Recebida assinatura inválida");
+							out.writeObject(false);
+						} else {
+							Long unsignedNonce = (Long) signedObject.getObject();
+							if(unsignedNonce==nonce) {
+								uc.registerUser(user, pksFolder, publicKey);
+								wallets.setBalance(user, 200);
+								System.out.println("Utilizador criado");
+								out.writeObject(true);
+								runCommands(in, out, uc.getUser(user));
+							} else {
+								System.out.println("Recebido nonce assinado diferente");
+								out.writeObject(false);
+							}
+						}
+					}						
+				} else{
+					out.writeObject(nonce);
+					char flag = 'c';
+					out.writeObject(flag);
+					SignedObject signedObject = (SignedObject)in.readObject();
+
+					PublicKey pk = Utilities.readPk(pksFolder, uc.getUser(user).getFilename());
+					
+					Signature sig = Signature.getInstance("MD5withRSA");
+					if(!signedObject.verify(pk, sig)) {
+						System.out.println("Recebida assinatura inválida");
+						out.writeObject(false);
+					} else {
+						Long unsignedNonce = (Long) signedObject.getObject();
+						if(unsignedNonce==nonce) {
+							System.out.println("Utilizador logged in");
+							out.writeObject(true);
+							runCommands(in, out, uc.getUser(user));
+						} else {
+							System.out.println("Recebido nonce assinado diferente");
+							out.writeObject(false);
+						}
+					}				
 				}
-
-				runCommands(u);
-
-				// fin.close();
-				// output.close();
-				oos.close();
-				ois.close();
-
+				out.close();
+				in.close();
 				socket.close();
-
 			} catch (IOException | ClassNotFoundException e) {
+					e.printStackTrace();
+			} catch (InvalidKeyException e) {
+				e.printStackTrace();
+			} catch (NoSuchAlgorithmException e) {
+				e.printStackTrace();
+			} catch (SignatureException e) {
 				e.printStackTrace();
 			}
-
 		}
 
-		private void runCommands(User u) {
+		private void runCommands(ObjectInputStream inStream, ObjectOutputStream outStream, User u) {
 			while (true) {
 				try {
 					System.out.println("Waiting for commands...");
-					char command = (char) ois.readObject();
+					char command = (char) inStream.readObject();
 
 					switch (command) {
 						case 'e':
@@ -197,28 +252,28 @@ public class TintoImarketServer {
 							return;
 						case 'a':
 							System.out.println("ADD");
-							addWine(ois, oos);
+							addWine(inStream, outStream);
 							break;
 						case 's':
-							sellWine(ois, oos, u);
+							sellWine(inStream, outStream, u);
 							break;
 						case 'v':
-							viewWine(ois, oos, u);
+							viewWine(inStream, outStream, u);
 							break;
 						case 'b':
-							buyWine(ois, oos, u);
+							buyWine(inStream, outStream, u);
 							break;
 						case 'w':
-							wallet(oos, u);
+							wallet(outStream, u);
 							break;
 						case 'c':
-							classifyWine(ois, oos);
+							classifyWine(inStream, outStream);
 							break;
 						case 't':
-							talk(ois, oos, u);
+							talk(inStream, outStream, u);
 							break;
 						case 'r':
-							read(oos, u);
+							read(outStream, u);
 							break;
 					}
 				} catch (IOException | ClassNotFoundException e) {
@@ -304,134 +359,6 @@ public class TintoImarketServer {
 				System.exit(-1);
 			}
 		}
-
-		/* private synchronized void addComm() {
-			// Get wine id and image
-			String wineId = null;
-			File receivedFile = new File(imagesFolder, "image.tmp");
-			String fileName = null;
-
-			try {
-				receivedFile.createNewFile();
-			} catch (IOException e) {
-				// TODO Auto-generated catch block
-				e.printStackTrace();
-				return;
-			}
-
-			try {
-				System.out.println("Vou ler o wine");
-				wineId = (String) ois.readObject();
-
-				System.out.println(wineId);
-				fileName = (String) ois.readObject();
-				System.out.println(fileName);
-
-				long fileSize = (long) ois.readObject();
-
-				Utilities.receiveFile(is, receivedFile, fileSize);
-
-				File newFile;
-				if (receivedFile.renameTo((newFile = new File(imagesFolder, wineId + '_' + fileName)))) {
-					receivedFile = newFile;
-				}
-
-			} catch (Exception e) {
-				try {
-					oos.writeBoolean(false);
-					oos.flush();
-				} catch (IOException e1) {
-					e1.printStackTrace();
-				}
-				e.printStackTrace();
-				return;
-			}
-
-			if (wineId == null) {
-				try {
-					oos.writeBoolean(false);
-					oos.flush();
-				} catch (IOException e1) {
-					e1.printStackTrace();
-				}
-				return;
-			}
-
-			System.out.println(receivedFile.getName());
-			if (!wines.put(wineId, -1, -1, null, receivedFile)) {
-				try {
-					oos.writeBoolean(false);
-					oos.flush();
-				} catch (IOException e1) {
-					e1.printStackTrace();
-				}
-				return;
-			}
-
-			try {
-				oos.writeBoolean(true);
-				oos.flush();
-			} catch (IOException e1) {
-				e1.printStackTrace();
-			}
-		}
-
-		private synchronized void viewComm() {
-			String id = null;
-			try {
-				id = (String) ois.readObject();
-			} catch (IOException | ClassNotFoundException e) {
-				System.out.println("Failed to receive wineID from view: " + e.getMessage());
-				return;
-			}
-
-			Wine wine = wines.get(id);
-
-			if (wine == null) {
-				// Wine not found
-				try {
-					oos.writeBoolean(false);
-					oos.flush();
-					System.out.println("Vinho " + id + " não encontrado");
-				} catch (IOException e) {
-					e.printStackTrace();
-					return;
-				}
-				return;
-			}
-
-			try {
-				try {
-					oos.writeBoolean(true);
-					oos.flush();
-				} catch (IOException e) {
-					e.printStackTrace();
-					return;
-				}
-
-				System.out.println("\tA enviar dados de wine");
-
-				oos.writeObject(wine.quantity);
-				oos.writeObject(wine.value);
-				oos.writeObject(wine.seller);
-
-				File image = new File(wine.imgPath);
-
-				String imgName = image.getName();
-				int separatorIndex = imgName.indexOf("_");
-				imgName = imgName.substring(separatorIndex + 1);
-
-				oos.writeObject(imgName);
-
-				oos.writeObject(image.length());
-
-				Utilities.sendFile(oos, image);
-
-			} catch (IOException e) {
-				System.out.println("Failed to send wine Object from view: " + e.getMessage());
-				return;
-			}
-		} */
 
 		private void buyWine(ObjectInputStream inStream, ObjectOutputStream outStream, User u) {
 			try {
@@ -616,7 +543,7 @@ public class TintoImarketServer {
 	
 				oos.writeObject(image.length());
 	
-				Utilities.sendFile(os, image);
+				Utilities.sendFile(oos, image);
 				
 			} catch (IOException e) {
 				System.out.println("Failed to send wine Object from view: " + e.getMessage());

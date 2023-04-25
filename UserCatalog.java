@@ -5,11 +5,10 @@ import java.io.IOException;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Scanner;
-
-
+import java.security.PublicKey;
 public class UserCatalog {
 
-    private Map<String,User> users;
+    private static Map<String,User> users;
     private File userFile;
     private static UserCatalog INSTANCE = new UserCatalog();
 
@@ -19,7 +18,7 @@ public class UserCatalog {
 
     private UserCatalog() {
         users = new HashMap<>();
-        userFile = new File("userLog.txt");
+        userFile = new File("users.txt");
         readFile();
     }
 
@@ -40,30 +39,20 @@ public class UserCatalog {
     public User getUser(String username) {
         return users.get(username);
     }
-
-    public boolean validateUser(String username, String password) {
-        if (this.containsUser(username)) {
-            return users.get(username).validatePassword(password);
-        }
-        else
-            return false;
-
-    }
     
-
     /**
      * Register a User to the Server
      * @param name - name of the User
-     * @param password - Password of the User
+     * @param pk - Public key of the User
      * @throws FileNotFoundException
      */
-    public void registerUser(String name, String password) throws FileNotFoundException {
+    public void registerUser(String name, File folder, PublicKey pk) throws FileNotFoundException {
    
         try {
-            User user = new User(name, password, 200);
+            User user = new User(name, 200);
             users.put(name, user);
+            Utilities.writePk(pk, folder, user.getFilename());
             writeFile();
-        //    refreshFile(user);
         } catch (IOException e) {
             e.printStackTrace();
         }
@@ -73,13 +62,13 @@ public class UserCatalog {
     /**
      * Writes text file with usernames and passwords
      */
-    private void writeFile() {
+    public void writeFile() {
         try {
             FileWriter out = new FileWriter(this.userFile);
 
             for (var entry: users.entrySet()) {
                 User u = entry.getValue();
-                out.write(entry.getKey()+":"+u.getPassword()+"\n");
+                out.write(entry.getKey()+":"+u.getFilename()+"\n");
             }
             out.close();
 
@@ -103,7 +92,7 @@ public class UserCatalog {
                         String line = in.nextLine();
                         String[] content = line.split(":");
                         System.out.println(content[0]+" "+content[1]);
-                        registerUser(content[0],content[1]);
+                      //  registerUser(content[0],content[1]);
                     }
                     in.close();
             }
@@ -112,7 +101,7 @@ public class UserCatalog {
             e.printStackTrace();
         }
     }
-
+    
   
 
 }
