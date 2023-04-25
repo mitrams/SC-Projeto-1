@@ -1,7 +1,8 @@
-Segurança e Confiabilidade
+## Segurança e Confiabilidade
 
 Madalena Tomás 53464
 Francisco Cardoso 57547
+Martim Paraíba 56273
 
 Como compilar
 Servidor: javac src\server\TintoImarketServer.java
