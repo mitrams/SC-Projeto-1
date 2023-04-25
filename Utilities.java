@@ -5,9 +5,15 @@ import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.ObjectInputStream;
+import java.io.ObjectOutputStream;
 import java.io.OutputStream;
+import java.security.PublicKey;
 
 public class Utilities {
+
+
+
     public static void receiveFile(InputStream is, File file, long numBytes) throws IOException {
         FileOutputStream fos = new FileOutputStream(file);
         BufferedOutputStream bos = new BufferedOutputStream(fos);
@@ -53,36 +59,35 @@ public class Utilities {
         }
     }
 
-    /*
-     * >InStream
-     * >File
-     * 
-     * reader
-     * fWriter
-     * 
-     * buffer
-     * 
-     * !receive Filename
-     * !receive fileSize
-     * 
-     * bytesRead
-     * 
-     * loop (bytesRead < fileSize) {
-     * !receive numberOfBytes
-     * !receive bytes to buffer
-     * !write from buffer to file
-     * !update bytesRead
-     * }
-     * 
-     */
+    public static void writePk(PublicKey pk, File folder, String filename) throws IOException {
+        File filePk = new File(folder, filename);
+        FileOutputStream fos = new FileOutputStream(filePk);
+        ObjectOutputStream oos = new ObjectOutputStream(fos);
+        try {
+            oos.writeObject(pk);
+        } finally {
+            oos.close();
+            fos.close();
+        }
+    }
 
-    /*
-     * >OutStream
-     * >File
-     * 
-     * 
-     * 
-     * 
-     * 
-     */
+    public static PublicKey readPk(File folder, String filename) throws IOException {
+        PublicKey pk=null;
+        File filePk = new File(folder, filename);
+        FileInputStream fis = new FileInputStream(filePk);
+        ObjectInputStream ois = new ObjectInputStream(fis);    
+
+        try {
+            pk = (PublicKey)ois.readObject();
+        }
+        catch (Exception e) {
+			e.printStackTrace();
+            ois.close();
+            fis.close();
+            return null;
+        }
+        ois.close();
+        fis.close();
+        return pk;
+    }
 }

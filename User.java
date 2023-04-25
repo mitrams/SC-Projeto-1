@@ -1,6 +1,5 @@
 
  import java.io.IOException;
-
  
  
  
@@ -10,38 +9,26 @@
      private String name;
      //private float balance;
      private String password;
+     private String filename;
 
-     public User(String name, String password, float balance) throws IOException {
+     public User(String name, float balance) throws IOException {
          this.name = name;
      //    this.balance = balance;
-         this.password = password;
+         this.filename = name;
   
      }
  
      public String getName() {
          return name;
      }
- 
-    // public float getBalance() {
-    //     return balance;
-    // }
+     
+	public String getFilename() {
+		return this.filename;
+	}
 
      public String getPassword() {
     	return this.password;
     }
-
-    public boolean validatePassword(String password) {
-        return (password.equals(this.password));
-    }
-
-    // public void setBalance(float bal) {
-    //     this.balance = bal;
-    // }
-
-    // public void changeBalance(float bal) {
-    //     this.balance+=bal;
-    // }
-
 
  }
  
