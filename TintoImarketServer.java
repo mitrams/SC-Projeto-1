@@ -47,6 +47,7 @@ public class TintoImarketServer {
 	final static File imagesFolder = new File(serverFolder, "Images");
 	final static File userLog = new File(serverFolder, "loginInfo");
 	final static File pksFolder = new File(serverFolder, "Pks");
+	final static Log logger = Log.getInstance();
 
 	private String chipherpw;
 	private String keystore;
@@ -390,6 +391,9 @@ public class TintoImarketServer {
 				wallets.changeBalance(u.getName(), -trxValue);
 				wallets.changeBalance(uc.getUser(seller).getName(), trxValue);
 				wc.writeFile();
+
+				logger.write("BUY:: " + w.getName() + " " + quantity + " " + l.getValue() + " " + u.getName());
+
 				outStream.writeObject(0);
 			} catch (IOException e) {
 				e.printStackTrace();
@@ -419,6 +423,8 @@ public class TintoImarketServer {
 				wc.addListing(name, u.getName(), value, quantity);
 				wc.writeFile();
 
+				logger.write("SELL:: " + name + " " + quantity + " " + value + " " + u.getName());
+				
 				outStream.writeObject(0);
 
 			} catch (IOException e) {
