@@ -1,10 +1,1 @@
-/Listing.class
-/TintoImarket.class
-/TintoImarketServer$ServerThread.class
-/TintoImarketServer.class
-/User.class
-/UserCatalog.class
-/Utilities.class
-/Wallets.class
-/Wine.class
-/WineCatalog.class
+*.class
