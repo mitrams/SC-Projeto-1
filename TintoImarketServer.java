@@ -465,19 +465,17 @@ public class TintoImarketServer {
 
 					// Load the keystore
 					KeyStore keyStore = KeyStore.getInstance("JKS");
-					FileInputStream inputStream = new FileInputStream("keystore."+u.getName());
+					FileInputStream inputStream = new FileInputStream("keystore."+toWhom);
 					keyStore.load(inputStream, "client".toCharArray());
 			
 					// Get the key from the keystore
-					Certificate certificate = keyStore.getCertificate(u.getName());
+					Certificate certificate = keyStore.getCertificate(toWhom);
 					PublicKey publicKey = certificate.getPublicKey();
 			
 					// Encrypt the input string
 					Cipher cipher = Cipher.getInstance("RSA/ECB/PKCS1Padding");
 					cipher.init(Cipher.ENCRYPT_MODE, publicKey);
 					byte[] encryptedBytes = cipher.doFinal(text.toString().getBytes());
-
-					System.out.println(encryptedBytes.toString());
 
         			String encText = Base64.getEncoder().encodeToString(encryptedBytes);
 
@@ -512,13 +510,11 @@ public class TintoImarketServer {
 
 						// Load the keystore
 						KeyStore keyStore = KeyStore.getInstance("JKS");
-						FileInputStream inputStream = new FileInputStream("keystore."+sender);
+						FileInputStream inputStream = new FileInputStream("keystore."+name);
 						keyStore.load(inputStream, "client".toCharArray());
 			
 						// Get the key from the keystore
-						//Certificate certificate = keyStore.getCertificate(sender);
-						//PublicKey publicKey = certificate.getPublicKey();
-						PrivateKey privateKey = (PrivateKey) keyStore.getKey(sender, "client".toCharArray());
+						PrivateKey privateKey = (PrivateKey) keyStore.getKey(name, "client".toCharArray());
 
 						// Decode the input string from base64
 						byte[] inputBytes = Base64.getDecoder().decode(text);
