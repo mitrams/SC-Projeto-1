@@ -8,6 +8,11 @@ Como compilar
 Servidor: javac src\server\TintoImarketServer.java
 Cliente: javac src\client\TintoImarketClient.java
 
+Como gerar .jar
+
+Servidor: jar cfm Servidor.jar manifestServer *.class
+Cliente: jar cfm Cliente.jar manifestClient *.class
+
 Testar
 Após o código compilado
 
