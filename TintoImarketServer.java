@@ -382,7 +382,8 @@ public class TintoImarketServer {
 					outStream.writeObject(3);
 					return;
 				}
-				float trxValue = quantity * l.getValue();
+				float value = l.getValue();
+				float trxValue = quantity * value;
 				if (wallets.getBalance(u.getName()) < trxValue) {
 					outStream.writeObject(4);
 					return;
@@ -392,7 +393,7 @@ public class TintoImarketServer {
 				wallets.changeBalance(uc.getUser(seller).getName(), trxValue);
 				wc.writeFile();
 
-				logger.write("BUY:: " + w.getName() + " " + quantity + " " + l.getValue() + " " + u.getName());
+				logger.logTransaction(new Transaction(TransactionType.BUY, name, quantity, value, seller));
 
 				outStream.writeObject(0);
 			} catch (IOException e) {
@@ -423,7 +424,7 @@ public class TintoImarketServer {
 				wc.addListing(name, u.getName(), value, quantity);
 				wc.writeFile();
 
-				logger.write("SELL:: " + name + " " + quantity + " " + value + " " + u.getName());
+				logger.logTransaction(new Transaction(TransactionType.SELL, name, quantity, value, u.getName()));
 				
 				outStream.writeObject(0);
 
