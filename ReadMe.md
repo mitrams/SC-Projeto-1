@@ -20,3 +20,4 @@ Servidor: java -jar Server.jar <port>
 Cliente: java -jar Client.jar <serverAddress> <userID> [password]
 
 Limitações do trabalho:
+O End to End nas mensagens nao devolve corretamente a mensagem ao ler()
