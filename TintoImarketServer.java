@@ -10,8 +10,9 @@
 
 import java.io.File;
 import java.io.FileInputStream;
+import java.io.FileInputStream;
 import java.io.FileNotFoundException;
-import java.io.FileWriter;
+import java.io.FileWriter;blockchain.getBlocks().size();
 import java.io.IOException;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
@@ -58,10 +59,11 @@ public class TintoImarketServer {
 	final static File userLog = new File(serverFolder, "loginInfo");
 	final static File pksFolder = new File(serverFolder, "Pks");
 	final static Log logger = Log.getInstance();
-
+	
 	private String chipherpw;
 	private String keystore;
 	private String keystorepw;
+	public Certificate serverCertificate;
 
 	public static void main(String[] args) {
 		if (!serverFolder.exists()) {
@@ -119,6 +121,23 @@ public class TintoImarketServer {
 			this.chipherpw = args[1];
 			this.keystore = args[2];
 			this.keystorepw = args[3];
+
+			try {
+				FileInputStream kfile = new FileInputStream(this.keystore); //keystore
+				KeyStore kstore = KeyStore.getInstance("PKCS12");
+				kstore.load(kfile, this.keystorepw.toCharArray());
+				serverCertificate = kstore.getCertificate("tintolmarketserver");
+			} catch (FileNotFoundException e) {
+				System.out.println("Ficheiro de keystore não encontrado");
+				System.exit(-1);
+			} catch (IOException e) {
+				System.out.println("Palavra passe da keystore incorreta");
+				System.exit(-1);
+			} catch (Exception e) {
+				e.printStackTrace();
+				System.exit(-1);
+			} 
+
 		}else{
 			System.out.println("Formato incorreto: Utilizar TintolmarketServer <port> <password-cifra> <keystore> <password-keystore>");
 			System.exit(-1);
