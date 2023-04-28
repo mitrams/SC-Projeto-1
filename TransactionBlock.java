@@ -50,6 +50,15 @@ public class TransactionBlock {
         this.signature = signature;
     }
 
+    public void addTransaction(Transaction trx) {
+        data.addTransaction(trx);
+    }
+
+    public void updateSignature() {
+        // TODO Auto-generated method stub
+        
+    }
+
     
 
 }
