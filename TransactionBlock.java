@@ -4,8 +4,8 @@ import java.util.List;
 
 public class TransactionBlock {
 
-    TransactionBlockData data;
-    Signature signature = null;
+    private TransactionBlockData data;
+    private Signature signature = null;
 
     public TransactionBlock() {
     }
@@ -33,5 +33,23 @@ public class TransactionBlock {
     public List<Transaction> getTransactions() {
         return data.getTransactions();
     }
+
+    public TransactionBlockData getData() {
+        return data;
+    }
+
+    public Signature getSignature() {
+        return signature;
+    }
+
+    public void setData(TransactionBlockData data) {
+        this.data = data;
+    }
+
+    public void setSignature(Signature signature) {
+        this.signature = signature;
+    }
+
+    
 
 }
