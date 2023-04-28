@@ -23,10 +23,12 @@ import java.security.InvalidKeyException;
 import java.security.KeyStore;
 import java.security.KeyStoreException;
 import java.security.NoSuchAlgorithmException;
+import java.security.PrivateKey;
 import java.security.PublicKey;
 import java.security.Signature;
 import java.security.SignatureException;
 import java.security.SignedObject;
+import java.security.UnrecoverableKeyException;
 import java.security.cert.Certificate;
 import java.security.cert.CertificateException;
 import java.util.Base64;
@@ -475,6 +477,8 @@ public class TintoImarketServer {
 					cipher.init(Cipher.ENCRYPT_MODE, publicKey);
 					byte[] encryptedBytes = cipher.doFinal(text.toString().getBytes());
 
+					System.out.println(encryptedBytes.toString());
+
         			String encText = Base64.getEncoder().encodeToString(encryptedBytes);
 
 					myWriter.write(encText);
@@ -512,18 +516,17 @@ public class TintoImarketServer {
 						keyStore.load(inputStream, "client".toCharArray());
 			
 						// Get the key from the keystore
-						Certificate certificate = keyStore.getCertificate(sender);
-						PublicKey publicKey = certificate.getPublicKey();
+						//Certificate certificate = keyStore.getCertificate(sender);
+						//PublicKey publicKey = certificate.getPublicKey();
+						PrivateKey privateKey = (PrivateKey) keyStore.getKey(sender, "client".toCharArray());
 
 						// Decode the input string from base64
 						byte[] inputBytes = Base64.getDecoder().decode(text);
 			
 						// Decrypt the input string
 						Cipher cipher = Cipher.getInstance("RSA/ECB/PKCS1Padding");
-						cipher.init(Cipher.DECRYPT_MODE, publicKey);
+						cipher.init(Cipher.DECRYPT_MODE, privateKey);
 						byte[] decryptedBytes = cipher.doFinal(inputBytes);
-
-						System.out.println(decryptedBytes.toString());
 
         				String decText = Base64.getEncoder().encodeToString(decryptedBytes);		
 						outStream.writeObject(sender + " : " + decText);
@@ -535,7 +538,7 @@ public class TintoImarketServer {
 				} else {
 					outStream.writeObject(false);
 				}
-			} catch (IOException | KeyStoreException | NoSuchAlgorithmException | CertificateException | NoSuchPaddingException | InvalidKeyException | IllegalBlockSizeException | BadPaddingException e) {
+			} catch (IOException | KeyStoreException | NoSuchAlgorithmException | CertificateException | NoSuchPaddingException | InvalidKeyException | IllegalBlockSizeException | BadPaddingException | UnrecoverableKeyException e) {
 				e.printStackTrace();
 			}
 

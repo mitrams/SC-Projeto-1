@@ -450,7 +450,7 @@ public class TintoImarket {
 			if((boolean) inStream.readObject()) {
 				// Recebe do server as mensagens para ler
 				long numMsg = (long) inStream.readObject();
-				for(int i=0; i<numMsg; i++) {
+				for(int i=0; i<numMsg; i += 2) {
 					System.out.println((String) inStream.readObject());
 				}
 				System.out.println("Estas sao todas as mensagens novas");
