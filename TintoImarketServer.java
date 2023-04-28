@@ -9,6 +9,7 @@
  ***************************************************************************/
 
 import java.io.File;
+import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.FileWriter;
 import java.io.IOException;
@@ -19,17 +20,24 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.security.InvalidKeyException;
+import java.security.KeyStore;
+import java.security.KeyStoreException;
 import java.security.NoSuchAlgorithmException;
 import java.security.PublicKey;
 import java.security.Signature;
 import java.security.SignatureException;
 import java.security.SignedObject;
 import java.security.cert.Certificate;
+import java.security.cert.CertificateException;
+import java.util.Base64;
 import java.util.List;
 import java.util.Random;
 import java.util.Scanner;
 
-
+import javax.crypto.BadPaddingException;
+import javax.crypto.Cipher;
+import javax.crypto.IllegalBlockSizeException;
+import javax.crypto.NoSuchPaddingException;
 import javax.net.ServerSocketFactory;
 import javax.net.ssl.SSLServerSocket;
 import javax.net.ssl.SSLServerSocketFactory;
@@ -437,7 +445,7 @@ public class TintoImarketServer {
 
 				UserCatalog users = UserCatalog.getCatalog();
 				// Verifica se o utilizador existe
-				if (users.containsUser(toWhom)) {
+				if (users.containsUser(toWhom) && !(u.getName().equals(toWhom))) {
 					outStream.writeObject(true);
 					// Cria o ficheiro que vai ficar com as mensagens
 					File myObj = new File(toWhom + MSG_FILE);
@@ -446,16 +454,36 @@ public class TintoImarketServer {
 					// Escreve as mensagens no ficheiro
 					String[] msg = (String[]) inStream.readObject();
 					FileWriter myWriter = new FileWriter(toWhom + MSG_FILE, true);
-					myWriter.write(u.getName() + ":");
+					myWriter.write(u.getName() + "\n");
+
+					StringBuilder text = new StringBuilder();
 					for (int i = 0; i < msg.length; i++) {
-						myWriter.write(msg[i] + " ");
+						text.append(msg[i]+" ");
 					}
+
+					// Load the keystore
+					KeyStore keyStore = KeyStore.getInstance("JKS");
+					FileInputStream inputStream = new FileInputStream("keystore."+u.getName());
+					keyStore.load(inputStream, "client".toCharArray());
+			
+					// Get the key from the keystore
+					Certificate certificate = keyStore.getCertificate(u.getName());
+					PublicKey publicKey = certificate.getPublicKey();
+			
+					// Encrypt the input string
+					Cipher cipher = Cipher.getInstance("RSA/ECB/PKCS1Padding");
+					cipher.init(Cipher.ENCRYPT_MODE, publicKey);
+					byte[] encryptedBytes = cipher.doFinal(text.toString().getBytes());
+
+        			String encText = Base64.getEncoder().encodeToString(encryptedBytes);
+
+					myWriter.write(encText);
 					myWriter.write('\n');
 					myWriter.close();
 				} else {
 					outStream.writeObject(false);
 				}
-			} catch (IOException | ClassNotFoundException e) {
+			} catch (IOException | ClassNotFoundException | NoSuchAlgorithmException | NoSuchPaddingException | InvalidKeyException | IllegalBlockSizeException | BadPaddingException | KeyStoreException | CertificateException e) {
 				e.printStackTrace();
 			}
 
@@ -467,7 +495,7 @@ public class TintoImarketServer {
 			try {
 				File file = new File(name + MSG_FILE);
 				if (file.exists()) {
-					outStream.writeObject("Estas sao todas as mensagens novas");
+					outStream.writeObject(true);
 					Scanner myReader = new Scanner(file);
 					Path path = Paths.get(name + MSG_FILE);
 
@@ -475,17 +503,39 @@ public class TintoImarketServer {
 					outStream.writeObject(numMsg);
 
 					while (myReader.hasNextLine()) {
-						String data = myReader.nextLine();
-						outStream.writeObject(data);
+						String sender = myReader.nextLine();
+						String text = myReader.nextLine();
+
+						// Load the keystore
+						KeyStore keyStore = KeyStore.getInstance("JKS");
+						FileInputStream inputStream = new FileInputStream("keystore."+sender);
+						keyStore.load(inputStream, "client".toCharArray());
+			
+						// Get the key from the keystore
+						Certificate certificate = keyStore.getCertificate(sender);
+						PublicKey publicKey = certificate.getPublicKey();
+
+						// Decode the input string from base64
+						byte[] inputBytes = Base64.getDecoder().decode(text);
+			
+						// Decrypt the input string
+						Cipher cipher = Cipher.getInstance("RSA/ECB/PKCS1Padding");
+						cipher.init(Cipher.DECRYPT_MODE, publicKey);
+						byte[] decryptedBytes = cipher.doFinal(inputBytes);
+
+						System.out.println(decryptedBytes.toString());
+
+        				String decText = Base64.getEncoder().encodeToString(decryptedBytes);		
+						outStream.writeObject(sender + " : " + decText);
 					}
 					myReader.close();
 
 					// Apaga o ficheiro com as mensagens lidas
 					Files.delete(path);
 				} else {
-					outStream.writeObject("Nao ha mensagens novas!");
+					outStream.writeObject(false);
 				}
-			} catch (IOException e) {
+			} catch (IOException | KeyStoreException | NoSuchAlgorithmException | CertificateException | NoSuchPaddingException | InvalidKeyException | IllegalBlockSizeException | BadPaddingException e) {
 				e.printStackTrace();
 			}
 

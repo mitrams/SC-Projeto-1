@@ -422,12 +422,12 @@ public class TintoImarket {
 			// Manda par ao server o nome a quem e mandada a mensagem
 			String toWhom = cmd[1];
 			outStream.writeObject(toWhom);
-			// Apenas manda a mensagem caso o tulizador exista
+			// Apenas manda a mensagem caso o ulizador exista
 			if((boolean) inStream.readObject()) {
 				outStream.writeObject(Arrays.copyOfRange(cmd, 2, cmd.length));
 				System.out.println("Mensagem enviada!");
 			} else {
-				System.out.println("O utlizador "+toWhom+" nao existe");
+				System.out.println("O utlizador "+toWhom+" nao existe ou esta a tentar mandar mensagem a si proprio");
 			}
 		}  catch (IOException | ClassNotFoundException e){
 			System.err.println(e.getMessage());
@@ -447,17 +447,16 @@ public class TintoImarket {
 			outStream.writeObject(cmd[0].charAt(0));
 			
 			// Recebe do server se existem mensagens para ler ou nao
-			String msgState = (String) inStream.readObject();
-			if(msgState.equals("Estas sao todas as mensagens novas")) {
+			if((boolean) inStream.readObject()) {
 				// Recebe do server as mensagens para ler
 				long numMsg = (long) inStream.readObject();
 				for(int i=0; i<numMsg; i++) {
 					System.out.println((String) inStream.readObject());
 				}
+				System.out.println("Estas sao todas as mensagens novas");
+			} else {
+				System.out.println("Nao ha mensagens novas!");
 			}
-
-			// Relata o estado das mensagens 
-			System.out.println(msgState);
 		}  catch (IOException | ClassNotFoundException e){
 			System.err.println(e.getMessage());
 			System.exit(-1);
