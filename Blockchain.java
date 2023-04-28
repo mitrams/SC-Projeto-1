@@ -5,6 +5,7 @@ import java.io.IOException;
 import java.io.ObjectOutputStream;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
+import java.security.Signature;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
@@ -27,7 +28,7 @@ public class Blockchain {
         if (blocks.size() != 0) {
             return;
         }
-        TransactionBlock newBlock = new TransactionBlock();
+        TransactionBlock newBlock = new TransactionBlock(1);
         blocks.add(newBlock);
         newestBlock = newBlock;
     }
@@ -63,7 +64,17 @@ public class Blockchain {
             
             newestBlock.updateSignature();
 
-            oos.writeObject(newestBlock);
+            oos.writeObject(newestBlock.getHashOfPreviousBlock());
+            oos.writeObject(newestBlock.getBlk_id());
+            oos.writeObject(newestBlock.getN_trx());
+            for (Transaction transaction : newestBlock.getData().getTransactions()) {
+                oos.writeObject(transaction.getType());
+                oos.writeObject(transaction.getWineID());
+                oos.writeObject(transaction.getQuantity());
+                oos.writeObject(transaction.getValue());
+                oos.writeObject(transaction.getUserID());
+            }
+            oos.writeObject(newestBlock.getSignature());
         } catch (Exception e) {
             e.printStackTrace();
             System.exit(-1);
@@ -97,7 +108,7 @@ public class Blockchain {
         }
 
 
-        addBlock(new TransactionBlock());
+        addBlock(new TransactionBlock(blocks.size() + 1));
         newestBlock.setHashOfPreviousBlock(hashOfPreviousBlock);
     }
 

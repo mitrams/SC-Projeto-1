@@ -41,6 +41,9 @@ public class Wine  implements Serializable {
 
   public void addListing(String seller, float value, int quantity){
     Listing listing = new Listing(seller, value, quantity);
+    if (getSellerListing(seller) != null) {
+      return;
+    }
     this.listings.add(listing);
   }
 
@@ -51,6 +54,14 @@ public class Wine  implements Serializable {
       }
     }
     return null;
+  }
+  
+  public void clearListingsFromSeller(String seller) {
+    for(Listing lc : this.listings) {
+      if(lc.getSeller().equals(seller)) {
+        /* listings.remove(lc); */
+      }
+    }
   }
 
 }

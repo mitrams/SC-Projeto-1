@@ -7,7 +7,12 @@ public class TransactionBlock {
     private TransactionBlockData data;
     private Signature signature = null;
 
-    public TransactionBlock() {
+    public TransactionBlock(long blk_id) {
+        data = new TransactionBlockData(blk_id);
+    }
+
+    public TransactionBlock(byte[] hashOfPreviousBlock, long blk_id) {
+        data = new TransactionBlockData(blk_id);
     }
 
     public TransactionBlock(TransactionBlockData data) {
