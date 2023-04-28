@@ -58,8 +58,8 @@ public class TintoImarketServer {
 	final static File imagesFolder = new File(serverFolder, "Images");
 	final static File userLog = new File(serverFolder, "loginInfo");
 	final static File pksFolder = new File(serverFolder, "Pks");
-	final static Log logger = Log.getInstance();
-	
+	final static Blockchain blockChain = Blockchain.getInstance();
+
 	private String chipherpw;
 	private String keystore;
 	private String keystorepw;
@@ -110,7 +110,7 @@ public class TintoImarketServer {
 				port = Integer.parseInt(args[0]);
 
 				if (port < 0 || port > 65535) {
-					
+
 				}
 
 			} catch (NumberFormatException e) {
@@ -123,7 +123,7 @@ public class TintoImarketServer {
 			this.keystorepw = args[3];
 
 			try {
-				FileInputStream kfile = new FileInputStream(this.keystore); //keystore
+				FileInputStream kfile = new FileInputStream(this.keystore); // keystore
 				KeyStore kstore = KeyStore.getInstance("PKCS12");
 				kstore.load(kfile, this.keystorepw.toCharArray());
 				serverCertificate = kstore.getCertificate("tintolmarketserver");
@@ -136,19 +136,20 @@ public class TintoImarketServer {
 			} catch (Exception e) {
 				e.printStackTrace();
 				System.exit(-1);
-			} 
+			}
 
-		}else{
-			System.out.println("Formato incorreto: Utilizar TintolmarketServer <port> <password-cifra> <keystore> <password-keystore>");
+		} else {
+			System.out.println(
+					"Formato incorreto: Utilizar TintolmarketServer <port> <password-cifra> <keystore> <password-keystore>");
 			System.exit(-1);
 		}
 
 		try {
 			System.setProperty("javax.net.ssl.keyStore", keystore);
 			System.setProperty("javax.net.ssl.keyStorePassword", keystorepw);
-			ServerSocketFactory ssf = SSLServerSocketFactory.getDefault( );
+			ServerSocketFactory ssf = SSLServerSocketFactory.getDefault();
 			sSoc = (SSLServerSocket) ssf.createServerSocket(port);
-			
+
 		} catch (IOException e) {
 			System.err.println(e.getMessage());
 			System.exit(-1);
@@ -194,33 +195,32 @@ public class TintoImarketServer {
 			try {
 				ObjectOutputStream out = new ObjectOutputStream(socket.getOutputStream());
 				ObjectInputStream in = new ObjectInputStream(socket.getInputStream());
-				
+
 				Random rd = new Random();
 				long nonce = 10000000 + rd.nextInt(90000000);
-				
+
 				String user = null;
 				user = (String) in.readObject();
-			//	String username =  u.getName();
+				// String username = u.getName();
 				if (!uc.containsUser(user)) {
 					out.writeObject(nonce);
 					char flag = 'd';
 					out.writeObject(flag);
-					long receivednonce = (long)in.readObject();
-					if (receivednonce!=nonce) {
+					long receivednonce = (long) in.readObject();
+					if (receivednonce != nonce) {
 						System.out.println("Recebido nonce diferente");
 						out.writeObject(false);
-					}
-					else {
-						SignedObject signedObject = (SignedObject)in.readObject();
-						Certificate cer = (Certificate)in.readObject();
-						PublicKey publicKey = cer.getPublicKey( );
+					} else {
+						SignedObject signedObject = (SignedObject) in.readObject();
+						Certificate cer = (Certificate) in.readObject();
+						PublicKey publicKey = cer.getPublicKey();
 						Signature sig = Signature.getInstance("MD5withRSA");
-						if(!signedObject.verify(publicKey, sig)) {
+						if (!signedObject.verify(publicKey, sig)) {
 							System.out.println("Recebida assinatura inválida");
 							out.writeObject(false);
 						} else {
 							Long unsignedNonce = (Long) signedObject.getObject();
-							if(unsignedNonce==nonce) {
+							if (unsignedNonce == nonce) {
 								uc.registerUser(user, pksFolder, publicKey);
 								wallets.setBalance(user, 200);
 								System.out.println("Utilizador criado");
@@ -231,22 +231,22 @@ public class TintoImarketServer {
 								out.writeObject(false);
 							}
 						}
-					}						
-				} else{
+					}
+				} else {
 					out.writeObject(nonce);
 					char flag = 'c';
 					out.writeObject(flag);
-					SignedObject signedObject = (SignedObject)in.readObject();
+					SignedObject signedObject = (SignedObject) in.readObject();
 
 					PublicKey pk = Utilities.readPk(pksFolder, uc.getUser(user).getFilename());
-					
+
 					Signature sig = Signature.getInstance("MD5withRSA");
-					if(!signedObject.verify(pk, sig)) {
+					if (!signedObject.verify(pk, sig)) {
 						System.out.println("Recebida assinatura inválida");
 						out.writeObject(false);
 					} else {
 						Long unsignedNonce = (Long) signedObject.getObject();
-						if(unsignedNonce==nonce) {
+						if (unsignedNonce == nonce) {
 							System.out.println("Utilizador logged in");
 							out.writeObject(true);
 							runCommands(in, out, uc.getUser(user));
@@ -254,13 +254,13 @@ public class TintoImarketServer {
 							System.out.println("Recebido nonce assinado diferente");
 							out.writeObject(false);
 						}
-					}				
+					}
 				}
 				out.close();
 				in.close();
 				socket.close();
 			} catch (IOException | ClassNotFoundException e) {
-					e.printStackTrace();
+				e.printStackTrace();
 			} catch (InvalidKeyException e) {
 				e.printStackTrace();
 			} catch (NoSuchAlgorithmException e) {
@@ -305,11 +305,47 @@ public class TintoImarketServer {
 						case 'r':
 							read(outStream, u);
 							break;
+						case 'l':
+							list(outStream);
+							break;
 					}
 				} catch (IOException | ClassNotFoundException e) {
 					System.err.println(e.getMessage());
 					return;
 				}
+			}
+		}
+
+		private void list(ObjectOutputStream outStream) {
+			try {
+				List<TransactionBlock> trxBlocks = blockChain.getBlocks();
+				outStream.writeObject(trxBlocks.size());
+				
+				for (TransactionBlock transactionBlock : trxBlocks) {
+					outStream.writeObject(transactionBlock.getBlk_id());
+					long N_trx = transactionBlock.getN_trx();
+					outStream.writeObject(N_trx);
+
+					for (Transaction trx : transactionBlock.getTransactions()) {
+						for (int i = 0; i < N_trx; i++) {
+							outStream.writeObject(trx.getType().toString());
+							outStream.flush();
+							outStream.writeObject(trx.getWineID());
+							outStream.flush();
+							outStream.writeObject(trx.getQuantity());
+							outStream.flush();
+							outStream.writeObject(trx.getValue());
+							outStream.flush();
+							outStream.writeObject(trx.getUserID());
+							outStream.flush();
+						}
+					}
+				}
+				
+
+
+			} catch (Exception e) {
+				// TODO: handle exception
 			}
 		}
 
@@ -350,19 +386,18 @@ public class TintoImarketServer {
 		private void addWine(ObjectInputStream inStream, ObjectOutputStream outStream) {
 			try {
 				String name = (String) inStream.readObject();
-				
+
 				if (!wc.validateWine(name)) {
 					outStream.writeObject(0);
 
 					String imgName = (String) inStream.readObject();
 					System.out.println("recebi instrução add " + name + " " + imgName);
-					
+
 					File image = null;
 					try {
 						long fileSize = (long) inStream.readObject();
 						image = new File(imagesFolder, name + '_' + imgName);
 						Utilities.receiveFile(inStream, image, fileSize);
-
 
 					} catch (IOException e) {
 						e.printStackTrace();
@@ -374,7 +409,7 @@ public class TintoImarketServer {
 
 					wc.addWine(name, imagesFolder + "/" + imgName);
 					wc.writeFile();
-					
+
 				} else {
 					try {
 						outStream.writeObject(1);
@@ -390,7 +425,7 @@ public class TintoImarketServer {
 			}
 		}
 
-		private void buyWine(ObjectInputStream inStream, ObjectOutputStream outStream, User u) {
+		private synchronized void buyWine(ObjectInputStream inStream, ObjectOutputStream outStream, User u) {
 			try {
 				String name = (String) inStream.readObject();
 				String seller = (String) inStream.readObject();
@@ -420,9 +455,12 @@ public class TintoImarketServer {
 				l.sellQuantity(quantity);
 				wallets.changeBalance(u.getName(), -trxValue);
 				wallets.changeBalance(uc.getUser(seller).getName(), trxValue);
+				if (l.getQuantity() == 0) {
+					w.getListings().remove(l);
+				}
 				wc.writeFile();
 
-				logger.logTransaction(new Transaction(TransactionType.BUY, name, quantity, value, seller));
+				blockChain.logTransaction(new Transaction(TransactionType.BUY, name, quantity, value, seller));
 
 				outStream.writeObject(0);
 			} catch (IOException e) {
@@ -435,7 +473,7 @@ public class TintoImarketServer {
 
 		}
 
-		private void sellWine(ObjectInputStream inStream, ObjectOutputStream outStream, User u) {
+		private synchronized void sellWine(ObjectInputStream inStream, ObjectOutputStream outStream, User u) {
 			try {
 				String name = (String) inStream.readObject();
 				Float value = (Float) inStream.readObject();
@@ -453,8 +491,8 @@ public class TintoImarketServer {
 				wc.addListing(name, u.getName(), value, quantity);
 				wc.writeFile();
 
-				logger.logTransaction(new Transaction(TransactionType.SELL, name, quantity, value, u.getName()));
-				
+				blockChain.logTransaction(new Transaction(TransactionType.SELL, name, quantity, value, u.getName()));
+
 				outStream.writeObject(0);
 
 			} catch (IOException e) {
@@ -589,16 +627,16 @@ public class TintoImarketServer {
 				}
 				return;
 			}
-	
+
 			try {
-				
-				oos.writeObject(true);				
+
+				oos.writeObject(true);
 
 				Wine wine = wc.getWine(id);
-				
+
 				System.out.println("\tA enviar dados de wine");
 
-				List<Listing> lists =  wine.getListings();
+				List<Listing> lists = wine.getListings();
 
 				oos.writeObject(lists.size());
 
@@ -607,25 +645,24 @@ public class TintoImarketServer {
 					oos.writeObject(list.getValue()); // value
 					oos.writeObject(list.getSeller()); // seller
 				}
-	
+
 				File image = new File(wine.getImgPath());
-				
+
 				String imgName = image.getName();
 				int separatorIndex = imgName.indexOf("_");
 				imgName = imgName.substring(separatorIndex + 1);
-	
+
 				oos.writeObject(imgName);
-	
+
 				oos.writeObject(image.length());
-	
+
 				Utilities.sendFile(oos, image);
-				
+
 			} catch (IOException e) {
 				System.out.println("Failed to send wine Object from view: " + e.getMessage());
 				return;
 			}
 		}
 	}
-
 
 }

@@ -6,6 +6,7 @@
  * Francisco Cardoso 57547
  ***************************************************************************/
 
+import java.io.BufferedInputStream;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
@@ -22,7 +23,9 @@ import java.security.Signature;
 import java.security.SignatureException;
 import java.security.SignedObject;
 import java.security.cert.Certificate;
+import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.List;
 import java.util.Scanner;
 
 import javax.net.SocketFactory;
@@ -42,6 +45,8 @@ public class TintoImarket {
 	private static String truststore;
 	private static String keystore;
 	private static String keystorepw;
+
+	private static Blockchain blockchain = Blockchain.getInstance();
 
 	public static void main(String[] args) throws IOException, NoSuchAlgorithmException, ClassNotFoundException {
 		SSLSocket socket = null;
@@ -123,7 +128,7 @@ public class TintoImarket {
 			os = socket.getOutputStream();
 
 			outStream = new ObjectOutputStream(os);
-			inStream = new ObjectInputStream(is);
+			inStream = new ObjectInputStream(new BufferedInputStream(is));
 			sc = new Scanner(System.in);
 
 			boolean ans = false;
@@ -181,6 +186,9 @@ public class TintoImarket {
 					case ('h'):
 						help();
 						break;
+					case ('l'):
+						list(inStream, outStream);
+						break;
 					default:
 						System.out.println("--> \'" + cmd[0] + "\' - Comando desconhecido");
 				}
@@ -194,6 +202,41 @@ public class TintoImarket {
 			socket.close();		
 		}
 
+	}
+
+	private static void list(ObjectInputStream inStream, ObjectOutputStream outStream) {
+		try {
+			outStream.writeObject('l');
+		
+			int nBlocks = (int) inStream.readObject();
+
+			for (int i = 0; i < nBlocks; i++) {
+				System.out.println("Bloco " + (long) inStream.readObject() + ":");
+				long N_trx = (long) inStream.readObject();
+				System.out.println("Número de Transações: " + N_trx);
+				for (int j = 0; j < N_trx; j++) {
+					System.out.println("\tTransação " + (j + 1));
+					System.out.println("\tTipo: " +  (String) 		inStream.readObject());
+					System.out.println("\tVinho: " +  (String)		inStream.readObject());
+					System.out.println("\tQuantidade: " + (long) 	inStream.readObject());
+					System.out.println("\tValor: " + (float) 		inStream.readObject());
+					System.out.println("\tUtilizador: " + (String) 	inStream.readObject());
+					System.out.println("");
+					
+				}
+			}
+
+			/* for (TransactionBlock transactionBlock : trxBlocks) {
+				TransactionBlockData data = transactionBlock.getData();
+				System.out.println(transactionBlock.getBlk_id() + ":\n N_trx" + data.getN_trx() + "\n Hash of previous block " + data.getHashOfPreviousBlock() + "\n Transactions" + data.getTransactions());
+			} */
+
+
+		} catch (Exception e) {
+			// TODO: handle exception
+			e.printStackTrace();
+			return;
+		}
 	}
 
 	private static void classifyWine(ObjectInputStream inStream, ObjectOutputStream outStream, String[] cmd) {
@@ -329,7 +372,7 @@ public class TintoImarket {
 
 			long imgLength = (long) ois.readObject();
 
-			Utilities.receiveFile(is, new File(userFolder, imgName), imgLength);
+			Utilities.receiveFile(ois, new File(userFolder, imgName), imgLength);
 
 			System.out.println("Nome da imagem: " + imgName);
 
